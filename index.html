@@ -4,8 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E0E14">
-<title>Gym &middot; Programa Diego</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E0E14'/%3E%3Cpath d='M8 12v8M24 12v8M11 16h10' stroke='%237C5CFF' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<title>Gym Bro</title>
+<meta name="apple-mobile-web-app-title" content="Gym Bro">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%232BE08A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='%230E0E14'/%3E%3Cg fill='url(%23g)'%3E%3Crect x='3' y='13' width='3' height='6' rx='1.3'/%3E%3Crect x='6.5' y='10' width='4' height='12' rx='1.6'/%3E%3Crect x='10.5' y='14.4' width='11' height='3.2' rx='1.4'/%3E%3Crect x='21.5' y='10' width='4' height='12' rx='1.6'/%3E%3Crect x='26' y='13' width='3' height='6' rx='1.3'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%237C5CFF'/%3E%3Cstop offset='1' stop-color='%232BE08A'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='32' height='32' rx='9' fill='%230E0E14'/%3E%3Cg fill='url(%23g)'%3E%3Crect x='3' y='13' width='3' height='6' rx='1.3'/%3E%3Crect x='6.5' y='10' width='4' height='12' rx='1.6'/%3E%3Crect x='10.5' y='14.4' width='11' height='3.2' rx='1.4'/%3E%3Crect x='21.5' y='10' width='4' height='12' rx='1.6'/%3E%3Crect x='26' y='13' width='3' height='6' rx='1.3'/%3E%3C/g%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Asap:wght@300;400;500;600;700&family=Asap+Condensed:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -36,7 +40,7 @@ input,textarea,select{font-family:inherit;color:inherit}
 .lg-mark{width:78px;height:78px;border-radius:22px;margin-bottom:26px;
   background:linear-gradient(135deg,var(--violet),var(--green));
   display:flex;align-items:center;justify-content:center;box-shadow:0 10px 40px rgba(124,92,255,.35)}
-.lg-mark svg{width:40px;height:40px;stroke:#0E0E14;stroke-width:3;fill:none;stroke-linecap:round}
+.lg-mark svg{width:46px;height:46px;fill:#0E0E14}
 .lg-t{font-size:2rem;font-weight:700;letter-spacing:-.04em;margin-bottom:6px}
 .lg-s{color:var(--muted);font-size:.95rem;max-width:300px;margin-bottom:32px}
 .btn-g{display:flex;align-items:center;gap:11px;background:#fff;color:#1a1a1a;font-weight:600;
@@ -59,7 +63,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(14,14,20,.92);backdrop-
 .h-mark{width:33px;height:33px;border-radius:10px;flex:0 0 auto;
   background:linear-gradient(135deg,var(--violet),var(--green));
   display:flex;align-items:center;justify-content:center}
-.h-mark svg{width:18px;height:18px;stroke:#0E0E14;stroke-width:3.2;fill:none;stroke-linecap:round}
+.h-mark svg{width:21px;height:21px;fill:#0E0E14}
 .h-t{font-size:1.05rem;font-weight:700;letter-spacing:-.03em;line-height:1.1}
 .h-d{font-size:.66rem;color:var(--dim);font-family:'Asap Condensed',sans-serif;
   text-transform:uppercase;letter-spacing:.1em}
@@ -96,11 +100,31 @@ main{padding:20px 16px 30px;max-width:940px;margin:0 auto}
   letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
 
 /* ---------- INPUTS ---------- */
-input[type=date],input[type=number],input[type=text],textarea{
+input[type=date],input[type=time],input[type=number],input[type=text],textarea{
   background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;
   font-size:.9rem;color:var(--text);outline:none;transition:.15s;width:100%}
+/* 44px: alto minimo comodo para el dedo, y deja todos los campos parejos entre si */
+input[type=number],input[type=text]{min-height:44px}
 input:focus,textarea:focus{border-color:var(--violet);background:var(--surface3)}
-input[type=date]{color-scheme:dark;width:auto;min-width:150px}
+
+/* iOS Safari renderiza date y time con su propio widget: fondo gris, texto centrado y
+   altura distinta al resto. appearance:none lo desactiva y el pseudo-elemento
+   ::-webkit-date-and-time-value alinea el texto a la izquierda como en los demas campos. */
+input[type=date],input[type=time]{
+  -webkit-appearance:none;appearance:none;
+  color-scheme:dark;min-height:44px;line-height:1.2;
+  font-family:inherit;font-size:.95rem;font-weight:500;
+  display:flex;align-items:center;text-align:left}
+input[type=date]::-webkit-date-and-time-value,
+input[type=time]::-webkit-date-and-time-value{
+  text-align:left;margin:0;min-height:1.2em}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator{
+  filter:invert(.65);opacity:.7;cursor:pointer;margin-left:auto}
+input[type=date]::-webkit-inner-spin-button,
+input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none}
+/* en la fila de fecha de Entrenar el campo no ocupa todo el ancho */
+.daterow input[type=date]{width:auto;min-width:158px}
 .daterow{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
 
 /* ---------- EJERCICIO ---------- */
@@ -129,16 +153,18 @@ input[type=date]{color-scheme:dark;width:auto;min-width:150px}
 .iconbtn.yt:hover{border-color:var(--red);color:var(--red)}
 .iconbtn.rm:hover{border-color:var(--red);color:var(--red)}
 
-.fields{display:flex;align-items:center;gap:7px;margin-top:11px;padding-left:37px;flex-wrap:wrap}
-.fld{display:flex;align-items:center;gap:5px;background:var(--surface2);border:1px solid var(--border);
-  border-radius:9px;padding:3px 9px 3px 3px}
-.fld input{width:52px;background:transparent;border:none;padding:9px 3px;text-align:center;
-  font-size:.94rem;font-weight:600;min-height:38px}
+/* grid en vez de flex-wrap: con 3 columnas fijas nunca se parte en dos lineas,
+   sin importar el ancho de pantalla ni el tamano de los controles */
+.fields{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:11px;padding-left:42px}
+.fld{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);
+  border-radius:9px;padding:3px 8px 3px 4px;min-width:0}
+.fld input{flex:1 1 auto;width:100%;min-width:0;background:transparent;border:none;padding:9px 2px;
+  text-align:center;font-size:.94rem;font-weight:600;min-height:38px}
 .fld input:focus{background:transparent;border:none}
 .fld span{font-family:'Asap Condensed',sans-serif;font-size:.68rem;font-weight:700;
   letter-spacing:.09em;color:var(--dim);text-transform:uppercase}
-.xsep{color:var(--dim);font-weight:700;font-size:.85rem}
-.lastline{margin-top:9px;padding-left:37px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.xsep{display:none}
+.lastline{margin-top:9px;padding-left:42px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .meta{font-family:'Asap Condensed',sans-serif;font-size:.71rem;font-weight:600;letter-spacing:.05em;
   color:var(--dim);text-transform:uppercase}
 .meta b{color:var(--muted);font-weight:700}
@@ -307,6 +333,16 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
   border-left:1px dashed var(--dim);border-right:1px dashed var(--dim)}
 .mbar .fill{position:absolute;top:0;bottom:0;left:0;border-radius:5px}
 .mfill-bajo{background:var(--red)} .mfill-ok{background:var(--green)} .mfill-alto{background:var(--cyan)}
+/* objetivo semanal editable */
+.metabox{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.stepper{display:flex;align-items:center;gap:4px;background:var(--surface2);
+  border:1px solid var(--border);border-radius:12px;padding:4px;flex:0 0 auto}
+.stbtn{width:40px;height:40px;border-radius:9px;background:var(--surface3);color:var(--text);
+  font-size:1.25rem;font-weight:600;line-height:1;transition:.15s;
+  display:flex;align-items:center;justify-content:center}
+.stbtn:hover:not(:disabled){background:var(--violet);color:#fff}
+.stbtn:disabled{opacity:.3;cursor:default}
+.stval{min-width:34px;text-align:center;font-size:1.3rem;font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);
   border-radius:20px;padding:6px 12px;font-family:'Asap Condensed',sans-serif;font-size:.74rem;
@@ -348,9 +384,9 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 <div id="loader"><div class="spin"></div><div class="kick">Cargando</div></div>
 
 <div id="login-screen">
-  <div class="lg-mark"><svg viewBox="0 0 24 24"><path d="M5 9v6M19 9v6M8 12h8M3 11v2M21 11v2"/></svg></div>
-  <div class="lg-t">Programa de entrenamiento</div>
-  <div class="lg-s">Tu rutina, tus pesos y tu progreso. Ingres&aacute; con tu cuenta de Google.</div>
+  <div class="lg-mark"><svg viewBox="0 0 32 32"><rect x="3" y="13" width="3" height="6" rx="1.3"/><rect x="6.5" y="10" width="4" height="12" rx="1.6"/><rect x="10.5" y="14.4" width="11" height="3.2" rx="1.4"/><rect x="21.5" y="10" width="4" height="12" rx="1.6"/><rect x="26" y="13" width="3" height="6" rx="1.3"/></svg></div>
+  <div class="lg-t">Gym Bro</div>
+  <div class="lg-s">Tu rutina, tus pesos y tu progreso.<br>Ingres&aacute; con tu cuenta de Google.</div>
   <button class="btn-g" id="btn-login">
     <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/><path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.51 6.16-4.51z"/></svg>
     Ingresar con Google
@@ -367,9 +403,9 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 <div id="app">
 <header>
   <div class="h-l">
-    <div class="h-mark"><svg viewBox="0 0 24 24"><path d="M5 9v6M19 9v6M8 12h8M3 11v2M21 11v2"/></svg></div>
+    <div class="h-mark"><svg viewBox="0 0 32 32"><rect x="3" y="13" width="3" height="6" rx="1.3"/><rect x="6.5" y="10" width="4" height="12" rx="1.6"/><rect x="10.5" y="14.4" width="11" height="3.2" rx="1.4"/><rect x="21.5" y="10" width="4" height="12" rx="1.6"/><rect x="26" y="13" width="3" height="6" rx="1.3"/></svg></div>
     <div>
-      <div class="h-t">Entrenamiento</div>
+      <div class="h-t">Gym Bro</div>
       <div class="h-d" id="h-update">&mdash;</div>
     </div>
   </div>
@@ -502,6 +538,21 @@ var openSession = null;  // clave de la tarjeta expandida en el historial
 var cardioDraft = null;  // corrida que se esta cargando/editando en el modal
 var newEx = {name:'', w:'', s:'3', r:'12'};  // form de "cargar a mano", fuera del DOM
 var draftDirty = false;  // hay cambios sin guardar en la sesion en curso
+
+/* Objetivo de sesiones por semana. Es una preferencia, va en localStorage. */
+var META_DEF = 3;
+function metaSemanal(){
+  try{
+    var v = parseInt(localStorage.getItem('gym_meta')||'', 10);
+    if(v >= 1 && v <= 7) return v;
+  }catch(e){}
+  return META_DEF;
+}
+function setMeta(v){
+  v = Math.max(1, Math.min(7, parseInt(v,10) || META_DEF));
+  try{ localStorage.setItem('gym_meta', String(v)); }catch(e){}
+  buildHist();
+}
 var progBy = 'session';  // 'session' | 'week' | 'month'
 var progMetric = 'vol';  // 'vol' | 'series' | 'reps'
 var newGroup = 'superior';
@@ -725,15 +776,16 @@ function estancados(minSes){
    ================================================================== */
 function render(){ buildTrain(); buildHist(); buildProg(); buildPlan(); }
 
-function switchTab(t){
+function switchTab(t, noScroll){
   activeTab=t;
+  try{ localStorage.setItem('gym_tab', t); }catch(e){}   /* sobrevive a recargar la pagina */
   var tabs=document.querySelectorAll('.tab');
   for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('on', tabs[i].dataset.t===t);
   var ps=document.querySelectorAll('.panel');
   for(var j=0;j<ps.length;j++) ps[j].classList.remove('on');
   $('p-'+t).classList.add('on');
   if(t==='prog') drawProgCharts();
-  window.scrollTo(0,0);
+  if(!noScroll) window.scrollTo(0,0);
 }
 
 function secHd(title,color,cnt){
@@ -1129,8 +1181,8 @@ function renderCardio(){
 
   /* fecha y hora */
   h += '<div class="f3" style="grid-template-columns:1fr 1fr">'+
-       '<div><div class="fl">Fecha</div><input type="date" id="c-date" style="width:100%" value="'+esc(c.date)+'" onchange="setCardio(\'date\',this.value)"></div>'+
-       '<div><div class="fl">Hora de inicio</div><input type="time" id="c-time" style="width:100%;color-scheme:dark" value="'+esc(c.time)+'" onchange="setCardio(\'time\',this.value)"></div>'+
+       '<div><div class="fl">Fecha</div><input type="date" id="c-date" value="'+esc(c.date)+'" onchange="setCardio(\'date\',this.value)"></div>'+
+       '<div><div class="fl">Hora de inicio</div><input type="time" id="c-time" value="'+esc(c.time)+'" onchange="setCardio(\'time\',this.value)"></div>'+
        '</div>';
 
   /* duracion y distancia */
@@ -1258,18 +1310,32 @@ function buildHist(){
   /* semana y racha */
   var byWeek={};
   ss.forEach(function(s){ var k=weekKey(s.date); (byWeek[k]=byWeek[k]||{})[s.date]=true; });
+  var meta = metaSemanal();
   var thisWeek = byWeek[weekKey(todayISO())] ? Object.keys(byWeek[weekKey(todayISO())]).length : 0;
   var streak=0, cur=monday(new Date());
   for(var i=0;i<200;i++){
     cur.setDate(cur.getDate()-7);
     var n = byWeek[isoOf(cur)] ? Object.keys(byWeek[isoOf(cur)]).length : 0;
-    if(n>=3) streak++; else break;
+    if(n>=meta) streak++; else break;
   }
 
   h += '<div class="kpis">';
-  h += kpi('Esta semana', thisWeek+'/3', thisWeek>=3?'Semana cumplida':'Faltan '+(3-thisWeek), thisWeek>=3?'g':'');
-  h += kpi('Racha', streak+(streak===1?' semana':' semanas'), 'consecutivas con 3+', 'g');
+  h += kpi('Esta semana', thisWeek+'/'+meta,
+       thisWeek>=meta ? 'Semana cumplida' : 'Falta'+((meta-thisWeek)===1?' 1':'n '+(meta-thisWeek)),
+       thisWeek>=meta?'g':'');
+  h += kpi('Racha', streak+(streak===1?' semana':' semanas'), 'consecutivas con '+meta+'+', 'g');
   h += kpi('Total', ss.length, 'sesiones', 'c');
+  h += '</div>';
+
+  /* objetivo editable */
+  h += '<div class="card metabox">';
+  h += '<div><div class="kick">Objetivo semanal</div>'+
+       '<div class="hint" style="margin-top:2px">Sesiones de gym por semana</div></div>';
+  h += '<div class="stepper">'+
+       '<button class="stbtn" onclick="setMeta('+(meta-1)+')"'+(meta<=1?' disabled':'')+'>&minus;</button>'+
+       '<span class="stval num">'+meta+'</span>'+
+       '<button class="stbtn" onclick="setMeta('+(meta+1)+')"'+(meta>=7?' disabled':'')+'>+</button>'+
+       '</div>';
   h += '</div>';
 
   /* toggle vista */
@@ -1721,7 +1787,7 @@ function buildProg(){
     if(body.length>=2) h += '<div class="chartbox" style="height:170px"><canvas id="cv-body"></canvas></div>';
   }
   h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
-       '<div><div class="kick" style="margin-bottom:5px">Fecha</div><input type="date" id="b-date" value="'+todayISO()+'" style="width:100%"></div>'+
+       '<div><div class="kick" style="margin-bottom:5px">Fecha</div><input type="date" id="b-date" value="'+todayISO()+'"></div>'+
        '<div><div class="kick" style="margin-bottom:5px">Peso (kg)</div><input type="number" step="0.1" inputmode="decimal" id="b-w" placeholder="73"></div>'+
        '</div>';
   h += '<div style="margin:8px 0 12px"><div class="kick" style="margin-bottom:5px">Cintura (cm) &mdash; opcional</div>'+
@@ -1874,7 +1940,7 @@ function saveBody(){
 /* ---------------- PLAN ---------------- */
 function buildPlan(){
   var today=todayISO();
-  var hb=(D && D.habits && D.habits[today]) || {cal:false,prot:false,agua:false,sueno:false};
+  var hb=(D && D.habits && D.habits[today]) || {cal:false,prot:false,agua:false,sueno:false,crea:false};
   var h='';
   h += '<div class="ptitle">Plan de alimentaci&oacute;n</div>';
   h += '<div class="psub">Mifflin-St Jeor &middot; 73 kg &middot; 1,72 m &middot; 39 a&ntilde;os &middot; sedentario + 3 d&iacute;as de gym</div>';
@@ -1892,7 +1958,8 @@ function buildPlan(){
     {k:'cal',  n:'Cumpl&iacute; las calor&iacute;as objetivo', s:'~1850 kcal'},
     {k:'prot', n:'Llegu&eacute; a los 150 g de prote&iacute;na', s:'La m&aacute;s dif&iacute;cil'},
     {k:'agua', n:'Tom&eacute; agua suficiente', s:'2 a 3 litros'},
-    {k:'sueno',n:'Dorm&iacute; decente', s:'7 horas o m&aacute;s'}
+    {k:'sueno',n:'Dorm&iacute; decente', s:'7 horas o m&aacute;s'},
+    {k:'crea', n:'Tom&eacute; la creatina', s:'3 a 5 g &middot; todos los d&iacute;as, entrenes o no'}
   ];
   HB.forEach(function(x){
     var on=hb[x.k]===true;
@@ -1906,7 +1973,7 @@ function buildPlan(){
 function toggleHabit(k){
   var today=todayISO();
   if(!D.habits) D.habits={};
-  if(!D.habits[today]) D.habits[today]={cal:false,prot:false,agua:false,sueno:false};
+  if(!D.habits[today]) D.habits[today]={cal:false,prot:false,agua:false,sueno:false,crea:false};
   D.habits[today][k]=!D.habits[today][k];
   buildPlan();
   apiPost('saveHabits',{date:today, flags:D.habits[today]})
@@ -1946,27 +2013,37 @@ function fetchData(){
   };
   var onErr=function(){
     delete window[cb];
-    if(_retry<2){ _retry++; setTimeout(fetchData,2500); }
+    if(_retry<3){ _retry++; setTimeout(fetchData,2500); }
     else { _retry=0; hideLoad(); toast('No pude cargar los datos. Prob&aacute; de nuevo.','err'); }
   };
   var sc=document.createElement('script');
   sc.id='_jp'; sc.src=API_URL+'?callback='+cb+'&t='+Date.now(); sc.onerror=onErr;
   document.head.appendChild(sc);
-  setTimeout(function(){ if(window[cb]) onErr(); },20000);
+  setTimeout(function(){ if(window[cb]) onErr(); },35000);   /* en 4G 20s no alcanzaba */
 }
 
 var _first=true;
 function afterData(){
-  if(_first){ _first=false; curDate=todayISO(); }
+  if(_first){
+    _first=false;
+    curDate=todayISO();
+    /* al recargar la pagina se vuelve a la pestana donde estabas */
+    try{
+      var t=localStorage.getItem('gym_tab');
+      if(t && $('p-'+t)) activeTab=t;
+    }catch(e){}
+  }
+  /* refrescar no debe moverte de lugar: se conserva pestana y posicion de scroll */
+  var y = window.scrollY;
+
   /* si hay una sesion a medio cargar, NO se pisa: el boton de refrescar esta a 7px del de
      salir y antes un toque borraba todo lo tildado sin aviso */
-  if(draftDirty){
-    render();
-    toast('Datos actualizados &middot; tu sesi&oacute;n sin guardar sigue ac&aacute;');
-    return;
-  }
-  loadDraft();
+  if(!draftDirty) loadDraft();
   render();
+  switchTab(activeTab, true);
+  window.scrollTo(0, y);
+
+  if(draftDirty) toast('Datos actualizados &middot; tu sesi&oacute;n sin guardar sigue ac&aacute;');
 }
 function tryCache(){
   try{

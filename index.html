@@ -177,6 +177,7 @@ input[type=date]{color-scheme:dark;width:auto;min-width:150px}
 .kpi::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--violet)}
 .kpi.g::before{background:var(--green)}
 .kpi.c::before{background:var(--cyan)}
+.kpi.x::before{background:var(--border)}
 .kpi .kl{font-family:'Asap Condensed',sans-serif;font-size:.63rem;font-weight:700;letter-spacing:.15em;
   text-transform:uppercase;color:var(--dim);margin-bottom:5px}
 .kpi .kv{font-size:1.75rem;font-weight:700;letter-spacing:-.04em;line-height:1;font-variant-numeric:tabular-nums}
@@ -417,6 +418,15 @@ var GRUPOS = {
 };
 var GORDER = ['superior','medio','inferior'];
 
+/* Metricas del panel Progreso.
+   'vol' es peso x series x reps: NO ve el trabajo de peso corporal.
+   'series' y 'reps' si lo ven, por eso conviene mirar las tres. */
+var METRICAS = {
+  vol:    {lbl:'Volumen',      u:'kg'},
+  series: {lbl:'Series',       u:''},
+  reps:   {lbl:'Repeticiones', u:''}
+};
+
 var MACROS = {kcal:1850, prot:150, fat:55, carb:190};
 
 /* ==================================================================
@@ -432,7 +442,8 @@ var notesDraft = '';
 var histView = 'lista';  // 'lista' | 'cal'
 var calRef = null;       // mes que muestra el calendario
 var openSession = null;  // fecha de la sesion expandida en el historial
-var progBy = 'week';     // 'week' | 'month'
+var progBy = 'session';  // 'session' | 'week' | 'month'
+var progMetric = 'vol';  // 'vol' | 'series' | 'reps'
 var newGroup = 'superior';
 var charts = {};
 
@@ -539,19 +550,23 @@ function suggest(rec){
 function itemVol(it){ return nf(it.weight) * nf(it.series) * nf(it.reps); }
 function itemReps(it){ return nf(it.series) * nf(it.reps); }
 
+/* porGrupo guarda las TRES metricas por tren, no solo el volumen: el trabajo de peso
+   corporal (oblicuos, captain chair) suma 0 kg pero si suma series y reps. */
 function statsOf(sessions){
-  var o = {vol:0, series:0, reps:0, ses:sessions.length, porGrupo:{superior:0, medio:0, inferior:0}};
+  var g0 = function(){ return {vol:0, series:0, reps:0}; };
+  var o = {vol:0, series:0, reps:0, ses:sessions.length,
+           porGrupo:{superior:g0(), medio:g0(), inferior:g0()}};
   sessions.forEach(function(s){
     for(var id in s.items){
       var it = s.items[id];
       if(!it.done) continue;
-      var v = itemVol(it);
-      o.vol += v;
-      o.series += nf(it.series);
-      o.reps += itemReps(it);
+      var v = itemVol(it), r = itemReps(it), se = nf(it.series);
       var g = it.group || 'superior';
-      if(o.porGrupo[g] === undefined) g = 'superior';
-      o.porGrupo[g] += v;
+      if(!o.porGrupo[g]) g = 'superior';
+      o.vol += v; o.series += se; o.reps += r;
+      o.porGrupo[g].vol += v;
+      o.porGrupo[g].series += se;
+      o.porGrupo[g].reps += r;
     }
   });
   return o;
@@ -967,33 +982,59 @@ function buildProg(){
   var ss = (D && D.sessions) ? D.sessions : [];
   var h='';
   h += '<div class="ptitle">Progreso</div>';
-  h += '<div class="psub">Volumen de entrenamiento por tren</div>';
+  h += '<div class="psub">Trabajo por tren</div>';
 
   if(!ss.length){
     $('p-prog').innerHTML = h + '<div class="empty">Todav&iacute;a no hay sesiones para analizar.</div>';
     return;
   }
 
-  h += '<div style="display:flex;justify-content:center;margin-bottom:18px">';
+  /* agrupacion */
+  h += '<div style="display:flex;justify-content:center;margin-bottom:9px">';
   h += '<div class="pills">'+
+       '<button class="pill'+(progBy==='session'?' on':'')+'" onclick="setProgBy(\'session\')">Por sesi&oacute;n</button>'+
        '<button class="pill'+(progBy==='week'?' on':'')+'" onclick="setProgBy(\'week\')">Por semana</button>'+
        '<button class="pill'+(progBy==='month'?' on':'')+'" onclick="setProgBy(\'month\')">Por mes</button>'+
        '</div></div>';
 
+  /* metrica */
+  h += '<div style="display:flex;justify-content:center;margin-bottom:18px">';
+  h += '<div class="pills">';
+  ['vol','series','reps'].forEach(function(m){
+    h += '<button class="pill'+(progMetric===m?' on':'')+'" onclick="setProgMetric(\''+m+'\')">'+METRICAS[m].lbl+'</button>';
+  });
+  h += '</div></div>';
+
   var buckets = bucketize(ss, progBy);
-  var visibles = buckets.slice(-(progBy==='week'?8:6));
+  var visibles = buckets.slice(-bucketCount(progBy));
   var todas = [];
   visibles.forEach(function(b){ todas = todas.concat(b.sessions); });
   var st = statsOf(todas);
 
   h += '<div class="kpis">';
-  h += kpi('Volumen', fInt(st.vol)+' kg', progBy==='week'?'&uacute;ltimas 8 semanas':'&uacute;ltimos 6 meses');
+  h += kpi('Volumen', fInt(st.vol)+' kg', rangeLabel(progBy), progMetric==='vol'?'':'x');
   h += kpi('Series', fInt(st.series), 'series efectivas', 'g');
   h += kpi('Repeticiones', fInt(st.reps), 'reps totales', 'c');
   h += kpi('Sesiones', st.ses, 'entrenamientos');
   h += '</div>';
 
-  h += secHd('Volumen por tren','violet', progBy==='week'?'por semana':'por mes');
+  /* aviso: el volumen en kg no ve el peso corporal */
+  if(progMetric==='vol'){
+    var sinPeso = 0;
+    todas.forEach(function(s){
+      for(var id in s.items){ var it=s.items[id]; if(it.done && !(nf(it.weight)>0)) sinPeso++; }
+    });
+    if(sinPeso){
+      h += '<div class="card" style="display:flex;gap:10px;align-items:flex-start;background:var(--surface2)">'+
+           '<svg style="width:16px;height:16px;flex:0 0 auto;stroke:var(--cyan);stroke-width:2;fill:none;margin-top:2px" viewBox="0 0 24 24">'+
+           '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>'+
+           '<div class="hint">El volumen en kg <b>no cuenta los ejercicios de peso corporal</b> '+
+           '(abdominales, captain&#39;s chair). En este rango hay <b>'+sinPeso+'</b> de esos. '+
+           'Mir&aacute; <b>Series</b> o <b>Repeticiones</b> para ver ese trabajo.</div></div>';
+    }
+  }
+
+  h += secHd(METRICAS[progMetric].lbl+' por tren','violet', byLabel(progBy));
   h += '<div class="card"><div class="chartbox"><canvas id="cv-vol"></canvas></div>';
   h += '<div style="display:flex;gap:14px;justify-content:center;margin-top:12px;flex-wrap:wrap">';
   GORDER.forEach(function(g){
@@ -1001,18 +1042,26 @@ function buildProg(){
          '<span style="width:9px;height:9px;border-radius:2px;background:'+GRUPOS[g].col+'"></span>'+
          '<span class="kick" style="color:var(--muted)">'+GRUPOS[g].lbl+'</span></span>';
   });
-  h += '</div></div>';
+  h += '</div>';
+  if(progBy!=='session' && visibles.length && isCurrentBucket(visibles[visibles.length-1].key, progBy)){
+    h += '<div style="text-align:center;margin-top:9px"><span class="kick" style="color:var(--dim)">'+
+         '* '+(progBy==='week'?'semana':'mes')+' en curso, todav&iacute;a suma</span></div>';
+  }
+  h += '</div>';
 
-  /* reparto total por tren */
-  h += secHd('Reparto del trabajo','green','');
-  var totG = st.porGrupo, sum = totG.superior+totG.medio+totG.inferior;
+  /* reparto total por tren, segun la metrica elegida */
+  h += secHd('Reparto del trabajo','green', METRICAS[progMetric].lbl.toLowerCase());
+  var totG = st.porGrupo;
+  var sum = totG.superior[progMetric]+totG.medio[progMetric]+totG.inferior[progMetric];
   h += '<div class="card">';
   GORDER.forEach(function(g){
-    var pct = sum>0 ? (totG[g]/sum*100) : 0;
+    var val = totG[g][progMetric];
+    var pct = sum>0 ? (val/sum*100) : 0;
     h += '<div style="margin-bottom:13px">';
     h += '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
          '<span class="kick" style="color:var(--text)">'+GRUPOS[g].lbl+'</span>'+
-         '<span class="kick num">'+fInt(totG[g])+' kg &middot; '+Math.round(pct)+'%</span></div>';
+         '<span class="kick num">'+fInt(val)+(METRICAS[progMetric].u?' '+METRICAS[progMetric].u:'')+
+         ' &middot; '+Math.round(pct)+'%</span></div>';
     h += '<div style="height:8px;border-radius:5px;background:var(--surface3);overflow:hidden">'+
          '<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+GRUPOS[g].col+';border-radius:5px"></div></div>';
     h += '</div>';
@@ -1081,9 +1130,15 @@ function buildProg(){
 }
 
 function setProgBy(v){ progBy=v; buildProg(); drawProgCharts(); }
+function setProgMetric(v){ progMetric=v; buildProg(); drawProgCharts(); }
 
-/* agrupa sesiones en semanas o meses, ordenado ascendente */
+/* agrupa las sesiones por sesion, semana o mes. Siempre ascendente. */
 function bucketize(ss, by){
+  if(by==='session'){
+    return ss.slice()
+      .sort(function(a,b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); })
+      .map(function(s){ return {key:s.date, sessions:[s]}; });
+  }
   var map={}, keys=[];
   ss.forEach(function(s){
     var k = (by==='week') ? weekKey(s.date) : monthKey(s.date);
@@ -1098,7 +1153,20 @@ function bucketLabel(key, by){
     var p=key.split('-');
     return MESES[(+p[1])-1]+' '+p[0].slice(2);
   }
-  return fShort(key);
+  var l = fShort(key);
+  return (by!=='session' && isCurrentBucket(key, by)) ? l+' *' : l;
+}
+/* la semana o el mes en curso todavia no terminaron: la barra esta a medio llenar */
+function isCurrentBucket(key, by){
+  if(by==='session') return false;
+  if(by==='month') return key === monthKey(todayISO());
+  return key === weekKey(todayISO());
+}
+function bucketCount(by){ return by==='session' ? 10 : (by==='week' ? 8 : 6); }
+function byLabel(by){ return by==='session' ? 'por sesi&oacute;n' : (by==='week' ? 'por semana' : 'por mes'); }
+function rangeLabel(by){
+  return by==='session' ? '&uacute;ltimas 10 sesiones'
+       : (by==='week' ? '&uacute;ltimas 8 semanas' : '&uacute;ltimos 6 meses');
 }
 
 function drawProgCharts(){
@@ -1107,12 +1175,13 @@ function drawProgCharts(){
   var cv = $('cv-vol');
   if(cv){
     if(charts.vol){ charts.vol.destroy(); charts.vol=null; }
-    var buckets = bucketize(ss, progBy).slice(-(progBy==='week'?8:6));
+    var buckets = bucketize(ss, progBy).slice(-bucketCount(progBy));
     var labels = buckets.map(function(b){ return bucketLabel(b.key, progBy); });
+    var uni = METRICAS[progMetric].u;
     var dss = GORDER.map(function(g){
       return {
         label: GRUPOS[g].lbl,
-        data: buckets.map(function(b){ return Math.round(statsOf(b.sessions).porGrupo[g]); }),
+        data: buckets.map(function(b){ return Math.round(statsOf(b.sessions).porGrupo[g][progMetric]); }),
         backgroundColor: GRUPOS[g].col,
         borderRadius: 4, borderSkipped: false
       };
@@ -1125,7 +1194,9 @@ function drawProgCharts(){
         plugins:{ legend:{display:false}, tooltip:{
           backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
           titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10,
-          callbacks:{ label:function(c){ return c.dataset.label+': '+c.parsed.y.toLocaleString('es-AR')+' kg'; } }
+          callbacks:{ label:function(c){
+            return c.dataset.label+': '+c.parsed.y.toLocaleString('es-AR')+(uni?' '+uni:'');
+          } }
         }},
         scales:{
           x:{ stacked:true, grid:{display:false}, ticks:{color:'#5E5E70', font:{size:11}} },

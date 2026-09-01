@@ -70,14 +70,6 @@ header{position:sticky;top:0;z-index:300;background:rgba(14,14,20,.92);backdrop-
 .ibtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 
-#banner{background:var(--red-lt);border-bottom:1px solid rgba(255,77,94,.3);
-  padding:11px 16px;display:flex;align-items:flex-start;gap:11px}
-#banner.hide{display:none}
-#banner .bi{flex:0 0 auto;width:18px;height:18px;stroke:var(--red);stroke-width:2;fill:none;margin-top:1px}
-#banner p{font-size:.83rem;color:#FFA8B1;flex:1;line-height:1.4}
-#banner b{color:var(--red);font-weight:700}
-#banner button{flex:0 0 auto;color:var(--red);opacity:.75;font-size:1.1rem;line-height:1;padding:2px 4px}
-
 nav.tabs{position:sticky;top:56px;z-index:290;background:var(--bg);
   border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 nav.tabs::-webkit-scrollbar{display:none}
@@ -350,12 +342,6 @@ tr:last-child td{border-bottom:none}
     </button>
   </div>
 </header>
-
-<div id="banner">
-  <svg class="bi" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <p><b>Pendiente:</b> apto f&iacute;sico con enfoque cardiol&oacute;gico antes de subir intensidad (fumador, +5 a&ntilde;os sedentario).</p>
-  <button onclick="closeBanner()" title="Cerrar">&#10005;</button>
-</div>
 
 <nav class="tabs">
   <button class="tab on" data-t="train">Entrenar</button>
@@ -1327,13 +1313,9 @@ function initAuth(){
 /* ==================================================================
    INIT
    ================================================================== */
-function closeBanner(){
-  $('banner').classList.add('hide');
-  try{ localStorage.setItem('gym_banner','off'); }catch(e){}
-}
+
 
 window.addEventListener('load', function(){
-  try{ if(localStorage.getItem('gym_banner')==='off') $('banner').classList.add('hide'); }catch(e){}
   var tabs=document.querySelectorAll('.tab');
   for(var i=0;i<tabs.length;i++){
     (function(b){ b.addEventListener('click', function(){ switchTab(b.dataset.t); }); })(tabs[i]);

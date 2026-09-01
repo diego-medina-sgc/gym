@@ -340,10 +340,8 @@ tr:last-child td{border-bottom:none}
 /* ==================================================================
    CONFIG
    ================================================================== */
-/* Client ID de Google. El que viene por defecto es el del Admissions Dashboard (cuenta SGC).
-   Si al ingresar con diegoalejandromedina@gmail.com Google dice "Acceso bloqueado",
-   segui el PASO 6 del README-DEPLOY.md y pega aca tu Client ID propio. */
-var CLIENT_ID = '451910290982-vudb6uk5047r19ruujlae16ouhdh0km8.apps.googleusercontent.com';
+/* Client ID propio de Diego (proyecto GCP personal, cuenta gmail). */
+var CLIENT_ID = '124091853515-85ca8o8vd3nfd2nibct9qrq75tmqqdr1.apps.googleusercontent.com';
 var API_URL   = 'https://script.google.com/macros/s/AKfycbz2ESDui9gBFHc-PcqSGHrH5ISV3QZAGRzOz0gMcN4_GOCIdPvH4y0VMcGk_kCg4mC5/exec';
 var SECRET    = 'gym-diego-2026';
 
@@ -360,6 +358,10 @@ var WARMUP = [
   {id:'w3', n:'Retracciones escapulares',            p:'Retraccion escapular',      s:'2x15'}
 ];
 
+/* Compartido: lo hace en el dia C (por programa) y tambien en el dia A (por costumbre).
+   Mismo ID en los dos dias -> comparten el historial de peso. */
+var EX_PECHO_DECL = {id:'c3', n:'Empuje de pecho declinado en multipower', p:'Press de pecho declinado en multipower', s:'3x12'};
+
 var DAYS = {
   A: {
     t:'Espalda y B&iacute;ceps', color:'violet',
@@ -372,7 +374,9 @@ var DAYS = {
       {id:'a5', n:'B&iacute;ceps alternado con mancuernas',          p:'Biceps alternado con mancuernas', s:'3x12'},
       {id:'a6', n:'B&iacute;ceps martillo',                          p:'Biceps martillo', s:'3x10'},
       {id:'a7', n:'Abdominal recto largo (con disco)',               p:'Abdominal recto largo con disco', s:'3x12'},
-      {id:'a8', n:'Abdominales oblicuos alternados',                 p:'Abdominales oblicuos alternados', s:'3x15'}
+      {id:'a8', n:'Abdominales oblicuos alternados',                 p:'Abdominales oblicuos alternados', s:'3x15'},
+      {id:'a9', n:'Abdominales en captain&#39;s chair',                p:'Abdominal en captain chair silla romana', s:'3x15'},
+      EX_PECHO_DECL
     ],
     str:[
       {id:'sA0', n:'Estiramiento de dorsal',           p:'Estiramiento de dorsal', s:'2x20 seg por lado'},
@@ -404,7 +408,7 @@ var DAYS = {
       {id:'c0', n:'Peso muerto rumano con mancuernas (RDL)',  p:'Peso muerto rumano con mancuernas', s:'3x10'},
       {id:'c1', n:'Empuje de pecho en m&aacute;quina',        p:'Empuje de pecho en maquina', s:'3x12'},
       {id:'c2', n:'Apertura de pecho en m&aacute;quina',      p:'Apertura de pecho en maquina peck deck', s:'3x15'},
-      {id:'c3', n:'Empuje de pecho declinado en multipower',  p:'Press de pecho declinado en multipower', s:'3x12'},
+      EX_PECHO_DECL,
       {id:'c4', n:'Fondos de tr&iacute;ceps en banco',        p:'Fondos de triceps en banco', s:'3x10'},
       {id:'c5', n:'Press franc&eacute;s con barra Ez',        p:'Press frances con barra Z', s:'3x8'},
       {id:'c6', n:'Abdominales bisagra a una pierna',         p:'Abdominal bisagra a una pierna', s:'3x10 por lado'},

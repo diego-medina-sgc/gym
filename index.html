@@ -223,6 +223,14 @@ input[type=date]{color-scheme:dark;width:auto;min-width:150px}
 .hex:last-child{border-bottom:none}
 .hdot{flex:0 0 auto;width:7px;height:7px;border-radius:50%}
 .hdot.superior{background:var(--violet)} .hdot.medio{background:var(--green)} .hdot.inferior{background:var(--cyan)}
+.hdot.cardio{background:var(--green)}
+/* --- cardio --- */
+.hcard.cardio.open{border-color:var(--green)}
+.hcard.cardio .hchev{stroke:var(--dim)}
+.hcard.cardio.open .hchev{stroke:var(--green-2)}
+.hbadge.cardio{background:var(--green-lt);color:var(--green-2)}
+.hbadge.cardio svg{width:19px;height:19px;stroke:currentColor;stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
 .hex-n{flex:1;min-width:0;font-size:.86rem}
 .hex-v{flex:0 0 auto;font-family:'Asap Condensed',sans-serif;font-size:.76rem;font-weight:700;
   letter-spacing:.05em;color:var(--muted);font-variant-numeric:tabular-nums}
@@ -240,7 +248,11 @@ input[type=date]{color-scheme:dark;width:auto;min-width:150px}
 .calday.today{border-color:var(--border);color:var(--text)}
 .calday.hit{background:var(--violet-lt);color:var(--violet-2);font-weight:700;border-color:var(--violet)}
 .calday.hit:hover{background:var(--violet);color:#fff}
-.calday .bub{width:5px;height:5px;border-radius:50%;background:var(--violet-2);margin-top:3px}
+.calday.onlycardio{background:var(--green-lt);color:var(--green-2);border-color:var(--green)}
+.calday.onlycardio:hover{background:var(--green);color:#0E0E14}
+.calday .bubs{display:flex;gap:3px;margin-top:3px}
+.bub{width:5px;height:5px;border-radius:50%;background:var(--violet-2);display:inline-block;flex:0 0 auto}
+.bub.cardio{background:var(--green-2)}
 .callegend{display:flex;align-items:center;gap:8px;margin-top:14px;justify-content:center}
 
 /* ---------- TABLA ---------- */
@@ -441,7 +453,8 @@ var draftOrder = [];     // orden de los ejercicios de la sesion
 var notesDraft = '';
 var histView = 'lista';  // 'lista' | 'cal'
 var calRef = null;       // mes que muestra el calendario
-var openSession = null;  // fecha de la sesion expandida en el historial
+var openSession = null;  // clave de la tarjeta expandida en el historial
+var cardioDraft = null;  // corrida que se esta cargando/editando en el modal
 var progBy = 'session';  // 'session' | 'week' | 'month'
 var progMetric = 'vol';  // 'vol' | 'series' | 'reps'
 var newGroup = 'superior';
@@ -491,6 +504,8 @@ function slug(s){
 }
 function nf(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
 function fKg(v){ var n=parseFloat(v); return isNaN(n)?'':(Math.round(n*10)/10).toString().replace('.',','); }
+/* distancias: 2 decimales, como los muestra la app Fitness */
+function fKm(v){ var n=parseFloat(v); return isNaN(n)?'':n.toFixed(2).replace('.',','); }
 function fInt(v){ return Math.round(nf(v)).toLocaleString('es-AR'); }
 
 function toast(msg,type){
@@ -833,6 +848,169 @@ function saveSession(){
     .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
 }
 
+/* ==================================================================
+   CARDIO
+   Espeja la pantalla de detalle de la app Fitness. Se carga a mano:
+   HealthKit no expone los entrenamientos a Atajos (verificado 31/08/2026).
+   ================================================================== */
+var CARDIO_TIPOS = ['Correr','Andar','Bici','Otro'];
+
+function cardioList(){ return (D && D.cardio) ? D.cardio : []; }
+
+/* duracion en segundos -> "11:10" o "1:05:30" */
+function fDur(seg){
+  var s = Math.round(nf(seg));
+  var h = Math.floor(s/3600), m = Math.floor((s%3600)/60), q = s%60;
+  var mm = (h && m<10 ? '0' : '')+m;
+  return (h ? h+':' : '') + mm + ':' + (q<10?'0':'') + q;
+}
+/* ritmo en segundos por km -> "7'50&quot;" */
+function fRitmo(segKm){
+  var s = Math.round(nf(segKm));
+  if(!s) return '';
+  return Math.floor(s/60)+'&#39;'+((s%60)<10?'0':'')+(s%60)+'&quot;';
+}
+function ritmoDe(seg, km){
+  var k = nf(km);
+  return k>0 ? Math.round(nf(seg)/k) : 0;
+}
+function cardioStats(list){
+  var o = {km:0, seg:0, kcal:0, n:list.length};
+  list.forEach(function(c){
+    o.km += nf(c.km); o.seg += nf(c.dur); o.kcal += nf(c.kcalTot) || nf(c.kcalAct);
+  });
+  return o;
+}
+
+/* ---- modal de carga ---- */
+function openCardio(id){
+  var ex = null;
+  if(id){ cardioList().forEach(function(c){ if(c.id===id) ex=c; }); }
+  cardioDraft = ex ? JSON.parse(JSON.stringify(ex)) : {
+    id:'', date:todayISO(), time:'', type:'Correr',
+    dur:'', km:'', kcalAct:'', kcalTot:'', cadencia:'', desnivel:'', ritmo:'',
+    parciales:[], notes:''
+  };
+  renderCardio();
+  $('modal-ov').classList.add('open');
+}
+
+function renderCardio(){
+  var c = cardioDraft;
+  var mm = Math.floor(nf(c.dur)/60), ss = Math.round(nf(c.dur)%60);
+  var ritmoCalc = ritmoDe(c.dur, c.km);
+
+  var h = '';
+  h += '<div class="mttl"><h3>'+(c.id?'Editar corrida':'Registrar corrida')+'</h3>'+
+       '<button class="mx" onclick="closeModal()">&#10005;</button></div>';
+  h += '<div class="hint" style="margin-bottom:14px">Copi&aacute; los n&uacute;meros de la pantalla de detalle de la app Fitness.</div>';
+
+  /* tipo */
+  h += '<div class="fl kick" style="margin-bottom:6px">Tipo</div><div class="grow" style="grid-template-columns:repeat(4,1fr)">';
+  CARDIO_TIPOS.forEach(function(t){
+    h += '<button class="gbtn'+(c.type===t?' on':'')+'" onclick="setCardio(\'type\',\''+t+'\')">'+t+'</button>';
+  });
+  h += '</div>';
+
+  /* fecha y hora */
+  h += '<div class="f3" style="grid-template-columns:1fr 1fr">'+
+       '<div><div class="fl">Fecha</div><input type="date" id="c-date" style="width:100%" value="'+esc(c.date)+'" onchange="setCardio(\'date\',this.value)"></div>'+
+       '<div><div class="fl">Hora de inicio</div><input type="time" id="c-time" style="width:100%;color-scheme:dark" value="'+esc(c.time)+'" onchange="setCardio(\'time\',this.value)"></div>'+
+       '</div>';
+
+  /* duracion y distancia */
+  h += '<div class="f3">'+
+       '<div><div class="fl">Min</div><input type="number" min="0" inputmode="numeric" id="c-min" value="'+(mm||'')+'" oninput="setDur()"></div>'+
+       '<div><div class="fl">Seg</div><input type="number" min="0" max="59" inputmode="numeric" id="c-seg" value="'+(ss||'')+'" oninput="setDur()"></div>'+
+       '<div><div class="fl">Distancia km</div><input type="number" step="0.01" inputmode="decimal" id="c-km" value="'+esc(c.km)+'" oninput="setCardio(\'km\',this.value)"></div>'+
+       '</div>';
+
+  /* calorias y cadencia */
+  h += '<div class="f3">'+
+       '<div><div class="fl">Kcal activas</div><input type="number" inputmode="numeric" id="c-ka" value="'+esc(c.kcalAct)+'" oninput="setCardio(\'kcalAct\',this.value)"></div>'+
+       '<div><div class="fl">Kcal totales</div><input type="number" inputmode="numeric" id="c-kt" value="'+esc(c.kcalTot)+'" oninput="setCardio(\'kcalTot\',this.value)"></div>'+
+       '<div><div class="fl">Cadencia PPM</div><input type="number" inputmode="numeric" id="c-cad" value="'+esc(c.cadencia)+'" oninput="setCardio(\'cadencia\',this.value)"></div>'+
+       '</div>';
+
+  h += '<div style="margin-bottom:14px"><div class="fl kick" style="margin-bottom:5px">Desnivel (m) &mdash; opcional</div>'+
+       '<input type="number" inputmode="numeric" id="c-desn" value="'+esc(c.desnivel||'')+'" placeholder="&mdash;" oninput="setCardio(\'desnivel\',this.value)"></div>';
+
+  /* ritmo calculado */
+  h += '<div class="card" style="background:var(--surface2);padding:11px 13px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center">'+
+       '<span class="kick">Ritmo medio</span>'+
+       '<span class="num" style="font-weight:700;font-size:1.05rem;color:var(--cyan)">'+
+       (ritmoCalc ? fRitmo(ritmoCalc)+' /km' : '&mdash;')+'</span></div>';
+
+  /* parciales */
+  h += '<div class="mdiv"><span>parciales (opcional)</span></div>';
+  if(c.parciales.length){
+    h += '<div class="tw" style="margin-bottom:9px"><table><thead><tr>'+
+         '<th>Km</th><th>Tiempo</th><th>Ritmo</th><th>PPM</th><th></th></tr></thead><tbody>';
+    c.parciales.forEach(function(p,i){
+      h += '<tr>'+
+           '<td>'+(i+1)+'</td>'+
+           '<td>'+fDur(p.seg)+'</td>'+
+           '<td>'+(fRitmo(p.seg)||'&mdash;')+'</td>'+
+           '<td>'+(p.cadencia||'&mdash;')+'</td>'+
+           '<td class="r"><button class="mx" style="padding:0 4px" onclick="delParcial('+i+')">&#10005;</button></td>'+
+           '</tr>';
+    });
+    h += '</tbody></table></div>';
+  }
+  h += '<div class="f3">'+
+       '<div><div class="fl">Min</div><input type="number" min="0" inputmode="numeric" id="p-min" placeholder="9"></div>'+
+       '<div><div class="fl">Seg</div><input type="number" min="0" max="59" inputmode="numeric" id="p-seg" placeholder="10"></div>'+
+       '<div><div class="fl">PPM</div><input type="number" inputmode="numeric" id="p-cad" placeholder="132"></div>'+
+       '</div>';
+  h += '<button class="btn btn-dash" style="margin-bottom:16px" onclick="addParcial()">'+
+       '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar parcial</button>';
+
+  /* notas */
+  h += '<div style="margin-bottom:14px"><div class="fl kick" style="margin-bottom:5px">Notas</div>'+
+       '<input type="text" id="c-notes" value="'+esc(c.notes)+'" placeholder="Cinta, calle, sensaciones..." oninput="setCardio(\'notes\',this.value)"></div>';
+
+  h += '<button class="btn btn-p btn-full" id="btn-cardio" onclick="saveCardio()">Guardar corrida</button>';
+  if(c.id){
+    h += '<button class="btn btn-o btn-full" style="margin-top:9px;color:var(--red);border-color:rgba(255,77,94,.4)" '+
+         'onclick="delCardio(\''+jsq(c.id)+'\')">Borrar esta corrida</button>';
+  }
+
+  $('modal-box').innerHTML = h;
+}
+
+function setCardio(k,v){
+  cardioDraft[k] = String(v||'').trim();
+  if(k==='km' || k==='type') renderCardio();
+}
+function setDur(){
+  var m = nf($('c-min').value), s = nf($('c-seg').value);
+  cardioDraft.dur = String(m*60 + s);
+  renderCardio();
+}
+function addParcial(){
+  var m = nf($('p-min').value), s = nf($('p-seg').value), cad = $('p-cad').value;
+  if(!m && !s){ toast('Carg&aacute; el tiempo del parcial','err'); return; }
+  cardioDraft.parciales.push({seg: m*60+s, cadencia: String(cad||'').trim()});
+  renderCardio();
+}
+function delParcial(i){ cardioDraft.parciales.splice(i,1); renderCardio(); }
+
+function saveCardio(){
+  var c = cardioDraft;
+  if(!c.date){ toast('Falta la fecha','err'); return; }
+  if(!nf(c.dur) && !nf(c.km)){ toast('Carg&aacute; al menos duraci&oacute;n o distancia','err'); return; }
+  c.ritmo = String(ritmoDe(c.dur, c.km));
+  if(!c.id) c.id = c.date + 'T' + (c.time || '00:00');
+  apiPost('saveCardio', c, $('btn-cardio'))
+    .then(function(){ closeModal(); toast('Corrida guardada','ok'); fetchData(); })
+    .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
+}
+function delCardio(id){
+  apiPost('deleteCardio', {id:id})
+    .then(function(){ closeModal(); toast('Corrida borrada','ok'); fetchData(); })
+    .catch(function(e){ toast('No pude borrar: '+e.message,'err'); });
+}
+
 /* ---------------- HISTORIAL ---------------- */
 function buildHist(){
   var ss = (D && D.sessions) ? D.sessions : [];
@@ -864,6 +1042,10 @@ function buildHist(){
        '<button class="pill'+(histView==='cal'?' on':'')+'" onclick="setHistView(\'cal\')">Calendario</button>'+
        '</div></div>';
 
+  h += '<button class="btn btn-dash" style="margin-bottom:16px" onclick="openCardio()">'+
+       '<svg viewBox="0 0 24 24"><path d="M13 4a1 1 0 1 0 0-.001M8 21l2-5 3-2 1-4 3 3 3 1M6 12l2-4 4-1"/></svg>'+
+       'Registrar corrida</button>';
+
   h += (histView==='cal') ? calendarHTML(ss) : listHTML(ss);
 
   /* backup */
@@ -883,63 +1065,146 @@ function buildHist(){
 
 function setHistView(v){ histView=v; buildHist(); }
 
+/* Mezcla sesiones de gym y corridas en una sola linea de tiempo, mas nuevo primero.
+   Cada entrada lleva una clave unica: 'g:<fecha>' para gym, 'c:<id>' para cardio. */
+function timeline(ss){
+  var out = [];
+  ss.forEach(function(s){ out.push({k:'g:'+s.date, kind:'gym', date:s.date, time:'23:59', s:s}); });
+  cardioList().forEach(function(c){ out.push({k:'c:'+c.id, kind:'cardio', date:c.date, time:c.time||'00:00', c:c}); });
+  out.sort(function(a,b){
+    var ka=a.date+'T'+a.time, kb=b.date+'T'+b.time;
+    return ka<kb ? 1 : (ka>kb ? -1 : 0);
+  });
+  return out;
+}
+
 function listHTML(ss){
-  if(!ss.length) return '<div class="empty">Todav&iacute;a no hay sesiones guardadas.</div>';
+  var items = timeline(ss);
+  if(!items.length) return '<div class="empty">Todav&iacute;a no hay nada guardado.</div>';
   var h='';
-  ss.forEach(function(s){
-    var ids = s.order && s.order.length ? s.order : Object.keys(s.items);
-    var hechos = ids.filter(function(id){ return s.items[id] && s.items[id].done; });
-    var st = statsOf([s]);
-    var d = parseISO(s.date);
-    var open = openSession===s.date;
-
-    h += '<div class="hcard'+(open?' open':'')+'">';
-    h +=   '<button class="hhead" onclick="toggleSession(\''+s.date+'\')">';
-    h +=     '<div class="hbadge"><div class="d">'+d.getDate()+'</div><div class="m">'+MESES[d.getMonth()]+'</div></div>';
-    h +=     '<div class="hb"><div class="hd">'+fDate(s.date)+'</div>'+
-             '<div class="hm">'+hechos.length+' ejercicios &middot; '+fInt(st.vol)+' kg de volumen</div></div>';
-    h +=     '<svg class="hchev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>';
-    h +=   '</button>';
-
-    if(open){
-      h += '<div class="hdet">';
-      if(s.notes) h += '<div class="hnote">&ldquo;'+esc(s.notes)+'&rdquo;</div>';
-      ids.forEach(function(id){
-        var it=s.items[id]; if(!it || !it.done) return;
-        var det = [];
-        if(it.weight) det.push(fKg(it.weight)+' kg');
-        if(it.series && it.reps) det.push(esc(it.series)+'x'+esc(it.reps));
-        h += '<div class="hex">'+
-             '<span class="hdot '+(it.group||'superior')+'"></span>'+
-             '<span class="hex-n">'+dispName(id, it.name)+'</span>'+
-             '<span class="hex-v">'+(det.length?det.join(' &middot; '):'&mdash;')+'</span></div>';
-      });
-      var noHechos = ids.filter(function(id){ return s.items[id] && !s.items[id].done; });
-      if(noHechos.length){
-        h += '<div class="hm" style="margin-top:10px">No hechos: '+
-             noHechos.map(function(id){ return dispName(id, s.items[id].name); }).join(', ')+'</div>';
-      }
-      h += '<div style="display:flex;gap:8px;margin-top:14px">'+
-           '<button class="btn btn-o" style="flex:1;padding:9px" onclick="editSession(\''+s.date+'\')">Editar</button>'+
-           '</div>';
-      h += '</div>';
-    }
-    h += '</div>';
+  items.forEach(function(e){
+    h += (e.kind==='gym') ? gymCardHTML(e) : cardioCardHTML(e);
   });
   return h;
 }
 
-function toggleSession(date){ openSession = (openSession===date)?null:date; buildHist(); }
+function gymCardHTML(e){
+  var s = e.s;
+  var ids = s.order && s.order.length ? s.order : Object.keys(s.items);
+  var hechos = ids.filter(function(id){ return s.items[id] && s.items[id].done; });
+  var st = statsOf([s]);
+  var d = parseISO(s.date);
+  var open = openSession===e.k;
+
+  var h = '<div class="hcard'+(open?' open':'')+'">';
+  h +=   '<button class="hhead" onclick="toggleSession(\''+e.k+'\')">';
+  h +=     '<div class="hbadge"><div class="d">'+d.getDate()+'</div><div class="m">'+MESES[d.getMonth()]+'</div></div>';
+  h +=     '<div class="hb"><div class="hd">'+fDate(s.date)+'</div>'+
+           '<div class="hm">Gym &middot; '+hechos.length+' ejercicios &middot; '+fInt(st.vol)+' kg</div></div>';
+  h +=     '<svg class="hchev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>';
+  h +=   '</button>';
+
+  if(open){
+    h += '<div class="hdet">';
+    if(s.notes) h += '<div class="hnote">&ldquo;'+esc(s.notes)+'&rdquo;</div>';
+    ids.forEach(function(id){
+      var it=s.items[id]; if(!it || !it.done) return;
+      var det = [];
+      if(it.weight) det.push(fKg(it.weight)+' kg');
+      if(it.series && it.reps) det.push(esc(it.series)+'x'+esc(it.reps));
+      h += '<div class="hex">'+
+           '<span class="hdot '+(it.group||'superior')+'"></span>'+
+           '<span class="hex-n">'+dispName(id, it.name)+'</span>'+
+           '<span class="hex-v">'+(det.length?det.join(' &middot; '):'&mdash;')+'</span></div>';
+    });
+    var noHechos = ids.filter(function(id){ return s.items[id] && !s.items[id].done; });
+    if(noHechos.length){
+      h += '<div class="hm" style="margin-top:10px">No hechos: '+
+           noHechos.map(function(id){ return dispName(id, s.items[id].name); }).join(', ')+'</div>';
+    }
+    h += '<div style="display:flex;gap:8px;margin-top:14px">'+
+         '<button class="btn btn-o" style="flex:1;padding:9px" onclick="editSession(\''+s.date+'\')">Editar</button>'+
+         '</div>';
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+function cardioCardHTML(e){
+  var c = e.c;
+  var d = parseISO(c.date);
+  var open = openSession===e.k;
+  var resumen = [];
+  if(nf(c.km)) resumen.push(fKm(c.km)+' km');
+  if(nf(c.dur)) resumen.push(fDur(c.dur));
+  var ritmo = nf(c.ritmo) || ritmoDe(c.dur, c.km);
+
+  var h = '<div class="hcard cardio'+(open?' open':'')+'">';
+  h +=   '<button class="hhead" onclick="toggleSession(\''+jsq(e.k)+'\')">';
+  h +=     '<div class="hbadge cardio">'+
+           '<svg viewBox="0 0 24 24"><path d="M13 4a1 1 0 1 0 0-.001M8 21l2-5 3-2 1-4 3 3 3 1M6 12l2-4 4-1"/></svg>'+
+           '</div>';
+  h +=     '<div class="hb"><div class="hd">'+esc(c.type)+' &middot; '+fShort(c.date)+(c.time?' '+esc(c.time):'')+'</div>'+
+           '<div class="hm">'+(resumen.length?resumen.join(' &middot; '):'sin datos')+
+           (ritmo?' &middot; '+fRitmo(ritmo)+'/km':'')+'</div></div>';
+  h +=     '<svg class="hchev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>';
+  h +=   '</button>';
+
+  if(open){
+    h += '<div class="hdet">';
+    if(c.notes) h += '<div class="hnote">&ldquo;'+esc(c.notes)+'&rdquo;</div>';
+    var filas = [
+      ['Duraci&oacute;n', nf(c.dur) ? fDur(c.dur) : ''],
+      ['Distancia', nf(c.km) ? fKm(c.km)+' km' : ''],
+      ['Kcal activas', nf(c.kcalAct) ? fInt(c.kcalAct)+' kcal' : ''],
+      ['Kcal totales', nf(c.kcalTot) ? fInt(c.kcalTot)+' kcal' : ''],
+      ['Cadencia media', nf(c.cadencia) ? fInt(c.cadencia)+' ppm' : ''],
+      ['Desnivel', nf(c.desnivel) ? fInt(c.desnivel)+' m' : ''],
+      ['Ritmo medio', ritmo ? fRitmo(ritmo)+' /km' : '']
+    ];
+    filas.forEach(function(f){
+      if(!f[1]) return;
+      h += '<div class="hex"><span class="hdot cardio"></span>'+
+           '<span class="hex-n">'+f[0]+'</span><span class="hex-v">'+f[1]+'</span></div>';
+    });
+    if(c.parciales && c.parciales.length){
+      h += '<div class="hm" style="margin:12px 0 6px">Parciales</div>';
+      h += '<div class="tw"><table><thead><tr><th>Km</th><th>Tiempo</th><th>Ritmo</th><th class="r">PPM</th></tr></thead><tbody>';
+      c.parciales.forEach(function(p,i){
+        h += '<tr><td>'+(i+1)+'</td><td>'+fDur(p.seg)+'</td><td>'+(fRitmo(p.seg)||'&mdash;')+'</td>'+
+             '<td class="r">'+(p.cadencia||'&mdash;')+'</td></tr>';
+      });
+      h += '</tbody></table></div>';
+    }
+    h += '<div style="display:flex;gap:8px;margin-top:14px">'+
+         '<button class="btn btn-o" style="flex:1;padding:9px" onclick="openCardio(\''+jsq(c.id)+'\')">Editar</button>'+
+         '</div>';
+    h += '</div>';
+  }
+  return h + '</div>';
+}
+
+function toggleSession(k){ openSession = (openSession===k)?null:k; buildHist(); }
 function editSession(date){ curDate=date; loadDraft(); buildTrain(); switchTab('train'); }
 
 function calendarHTML(ss){
-  if(!calRef) calRef = new Date();
+  /* arranca en el mes de la ultima actividad, no en el mes actual:
+     si hoy es 1 del mes, abrir en un calendario vacio no sirve de nada */
+  if(!calRef){
+    var ult = null;
+    if(ss.length) ult = ss[0].date;
+    var cl = cardioList();
+    if(cl.length && (!ult || cl[0].date > ult)) ult = cl[0].date;
+    calRef = ult ? parseISO(ult) : new Date();
+  }
   var y=calRef.getFullYear(), m=calRef.getMonth();
-  var hits={};
-  ss.forEach(function(s){ hits[s.date]=s; });
 
-  var first=new Date(y,m,1);
-  var start=monday(first);
+  /* cada dia puede tener gym, cardio o los dos */
+  var hits={};
+  ss.forEach(function(s){ (hits[s.date]=hits[s.date]||{}).gym = true; });
+  cardioList().forEach(function(c){ (hits[c.date]=hits[c.date]||{}).cardio = true; });
+
+  var start=monday(new Date(y,m,1));
   var today=todayISO();
 
   var h='';
@@ -953,20 +1218,31 @@ function calendarHTML(ss){
   DOW.forEach(function(d){ h += '<div class="caldow">'+d+'</div>'; });
 
   var cur=new Date(start);
-  var mesN=0;
+  var nGym=0, nCar=0;
   for(var i=0;i<42;i++){
     var iso=isoOf(cur);
     var out = cur.getMonth()!==m;
-    var hit = !!hits[iso];
-    if(!out && hit) mesN++;
+    var hit = hits[iso];
+    if(!out && hit){ if(hit.gym) nGym++; if(hit.cardio) nCar++; }
     var cls='calday'+(out?' out':'')+(hit?' hit':'')+(iso===today?' today':'');
+    if(hit && !hit.gym && hit.cardio) cls += ' onlycardio';
+    var bubs='';
+    if(hit){
+      bubs = '<span class="bubs">'+
+             (hit.gym?'<span class="bub"></span>':'')+
+             (hit.cardio?'<span class="bub cardio"></span>':'')+'</span>';
+    }
     h += '<button class="'+cls+'"'+(hit?' onclick="jumpTo(\''+iso+'\')"':'')+'>'+
-         cur.getDate()+(hit?'<span class="bub"></span>':'')+'</button>';
+         cur.getDate()+bubs+'</button>';
     cur.setDate(cur.getDate()+1);
     if(i>=34 && cur.getMonth()!==m) break;
   }
   h += '</div>';
-  h += '<div class="callegend"><span class="kick">'+mesN+' entrenamientos en '+MESESL[m]+'</span></div>';
+  h += '<div class="callegend" style="gap:16px;flex-wrap:wrap">'+
+       '<span style="display:flex;align-items:center;gap:6px"><span class="bub"></span>'+
+       '<span class="kick">'+nGym+' gym</span></span>'+
+       '<span style="display:flex;align-items:center;gap:6px"><span class="bub cardio"></span>'+
+       '<span class="kick">'+nCar+' cardio</span></span></div>';
   h += '</div>';
   return h;
 }
@@ -975,7 +1251,16 @@ function calMove(n){
   calRef = new Date(calRef.getFullYear(), calRef.getMonth()+n, 1);
   buildHist();
 }
-function jumpTo(iso){ histView='lista'; openSession=iso; buildHist(); window.scrollTo(0,0); }
+/* abre lo primero que haya ese dia: el gym si existe, si no la corrida */
+function jumpTo(iso){
+  histView='lista';
+  var k = null;
+  (D && D.sessions ? D.sessions : []).forEach(function(s){ if(s.date===iso && !k) k='g:'+s.date; });
+  if(!k) cardioList().forEach(function(c){ if(c.date===iso && !k) k='c:'+c.id; });
+  openSession = k;
+  buildHist();
+  window.scrollTo(0,0);
+}
 
 /* ---------------- PROGRESO ---------------- */
 function buildProg(){
@@ -1101,6 +1386,23 @@ function buildProg(){
   });
   h += '</tbody></table></div>';
 
+  /* cardio */
+  var cl = cardioList();
+  if(cl.length){
+    var cs = cardioStats(cl);
+    var ritmoProm = cs.km>0 ? Math.round(cs.seg/cs.km) : 0;
+    h += secHd('Cardio','green', cl.length+(cl.length===1?' corrida':' corridas'));
+    h += '<div class="kpis">';
+    h += kpi('Distancia', fKm(cs.km)+' km', 'total acumulado', 'g');
+    h += kpi('Tiempo', fDur(cs.seg), 'corriendo', 'g');
+    h += kpi('Ritmo medio', ritmoProm?fRitmo(ritmoProm):'&mdash;', 'por kil&oacute;metro', 'c');
+    h += kpi('Calor&iacute;as', fInt(cs.kcal), 'quemadas', 'c');
+    h += '</div>';
+    h += '<div class="card"><div class="chartbox" style="height:200px"><canvas id="cv-cardio"></canvas></div>'+
+         '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
+         'kil&oacute;metros '+byLabel(progBy)+'</span></div></div>';
+  }
+
   /* peso corporal, en segundo plano */
   h += secHd('Peso corporal','violet','secundario');
   var body = (D && D.body) ? D.body : [];
@@ -1204,6 +1506,35 @@ function drawProgCharts(){
               callback:function(v){ return v>=1000 ? (v/1000)+'k' : v; }} }
         }
       }
+    });
+  }
+
+  /* cardio: km por sesion, semana o mes */
+  var cc = $('cv-cardio');
+  if(cc){
+    if(charts.cardio){ charts.cardio.destroy(); charts.cardio=null; }
+    var cl2 = cardioList();
+    var cmap={}, ckeys=[];
+    cl2.forEach(function(c){
+      var k = (progBy==='month') ? monthKey(c.date) : (progBy==='week' ? weekKey(c.date) : c.date);
+      if(!cmap[k]){ cmap[k]=0; ckeys.push(k); }
+      cmap[k] += nf(c.km);
+    });
+    ckeys.sort();
+    ckeys = ckeys.slice(-bucketCount(progBy));
+    charts.cardio = new Chart(cc.getContext('2d'), {
+      type:'bar',
+      data:{ labels: ckeys.map(function(k){ return bucketLabel(k, progBy); }),
+             datasets:[{ data: ckeys.map(function(k){ return Math.round(cmap[k]*100)/100; }),
+               backgroundColor:'#2BE08A', borderRadius:4, borderSkipped:false }]},
+      options:{ responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}, tooltip:{
+          backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
+          titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10, displayColors:false,
+          callbacks:{ label:function(c2){ return c2.parsed.y+' km'; } } }},
+        scales:{ x:{grid:{display:false}, ticks:{color:'#5E5E70', font:{size:10}}},
+                 y:{grid:{color:'#22222E'}, ticks:{color:'#5E5E70', font:{size:10},
+                     callback:function(v){ return v+' km'; }}} } }
     });
   }
 

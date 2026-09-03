@@ -114,9 +114,12 @@ main{padding:20px 16px 30px;max-width:940px;margin:0 auto}
   letter-spacing:.1em;color:var(--dim);text-transform:uppercase}
 
 /* ---------- INPUTS ---------- */
+/* 16px NO es capricho: iOS Safari hace auto-zoom al enfocar un input con letra mas
+   chica, y despues hay que achicar la pantalla con los dedos a mano. Es el minimo
+   que evita ese zoom. No usar user-scalable=no para taparlo: rompe el zoom manual. */
 input[type=date],input[type=time],input[type=number],input[type=text],textarea{
   background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:9px 11px;
-  font-size:.9rem;color:var(--text);outline:none;transition:.15s;width:100%}
+  font-size:16px;color:var(--text);outline:none;transition:.15s;width:100%}
 /* 44px: alto minimo comodo para el dedo, y deja todos los campos parejos entre si */
 input[type=number],input[type=text]{min-height:44px}
 input:focus,textarea:focus{border-color:var(--violet);background:var(--surface3)}
@@ -127,7 +130,7 @@ input:focus,textarea:focus{border-color:var(--violet);background:var(--surface3)
 input[type=date],input[type=time]{
   -webkit-appearance:none;appearance:none;
   color-scheme:dark;min-height:44px;line-height:1.2;
-  font-family:inherit;font-size:.95rem;font-weight:500;
+  font-family:inherit;font-size:16px;font-weight:500;
   display:flex;align-items:center;text-align:left}
 input[type=date]::-webkit-date-and-time-value,
 input[type=time]::-webkit-date-and-time-value{
@@ -145,7 +148,43 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
 .ex{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
   padding:13px 14px;margin-bottom:9px;transition:.18s}
 .ex.done{border-color:rgba(43,224,138,.4);background:linear-gradient(90deg,var(--green-lt),transparent 55%)}
+/* --- tarjeta de ejercicio: colapsada por defecto --- */
+.ex-head{display:flex;align-items:center;gap:11px;padding:2px 0}
+.ex-ttl{flex:1;min-width:0;text-align:left;font-size:.94rem;font-weight:600;line-height:1.3;
+  letter-spacing:-.01em;padding:9px 0;color:var(--text)}
+.ex-chev{flex:0 0 auto;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
+.ex-chev svg{width:17px;height:17px;stroke:var(--dim);stroke-width:2.2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round;transition:.2s}
+.ex.open .ex-chev svg{transform:rotate(180deg);stroke:var(--violet-2)}
+.ex.open{border-color:var(--violet)}
+.ex.done.open{border-color:rgba(43,224,138,.5)}
+.ex-det{padding-top:4px;margin-top:8px;border-top:1px solid var(--hairline)}
+.ex-sub{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 4px}
 .ex-top{display:flex;align-items:flex-start;gap:11px}
+
+/* --- RIR: reps en reserva --- */
+.rirbox{display:flex;align-items:center;gap:10px;margin-top:11px;padding-left:42px;flex-wrap:wrap}
+.rirlbl{font-family:'Asap Condensed',sans-serif;font-size:.7rem;font-weight:700;
+  letter-spacing:.12em;color:var(--dim);display:flex;align-items:center;gap:5px}
+.rirq{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;
+  border-radius:50%;border:1px solid var(--border);font-size:.62rem;cursor:pointer}
+.rirpills{display:flex;gap:5px;flex:1}
+.rirp{flex:1;min-width:0;height:36px;border-radius:9px;border:1px solid var(--border);
+  background:var(--surface2);color:var(--dim);font-size:.85rem;font-weight:600;transition:.15s}
+.rirp.on{background:var(--violet);border-color:var(--violet);color:#fff}
+
+/* --- timer de descanso --- */
+.restbox{margin-top:11px;padding-left:42px}
+.restbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+  min-height:40px;border-radius:10px;border:1px dashed var(--border);background:transparent;
+  color:var(--muted);font-family:'Asap Condensed',sans-serif;font-size:.8rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;transition:.15s;font-variant-numeric:tabular-nums}
+.restbtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.restbtn.corriendo{border-style:solid;border-color:var(--cyan);color:var(--cyan);
+  background:var(--cyan-lt);font-size:1.05rem}
+.restbtn.listo{border-style:solid;border-color:var(--green);color:var(--green-2);
+  background:var(--green-lt)}
 .chk{flex:0 0 auto;width:32px;height:32px;border-radius:9px;border:2px solid var(--border);
   background:var(--surface2);display:flex;align-items:center;justify-content:center;transition:.15s;margin-top:1px}
 .chk svg{width:17px;height:17px;stroke:#0E0E14;stroke-width:3.4;fill:none;
@@ -173,7 +212,7 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
 .fld{display:flex;align-items:center;gap:4px;background:var(--surface2);border:1px solid var(--border);
   border-radius:9px;padding:3px 8px 3px 4px;min-width:0}
 .fld input{flex:1 1 auto;width:100%;min-width:0;background:transparent;border:none;padding:9px 2px;
-  text-align:center;font-size:.94rem;font-weight:600;min-height:38px}
+  text-align:center;font-size:16px;font-weight:600;min-height:38px}
 .fld input:focus{background:transparent;border:none}
 .fld span{font-family:'Asap Condensed',sans-serif;font-size:.68rem;font-weight:700;
   letter-spacing:.09em;color:var(--dim);text-transform:uppercase}
@@ -469,7 +508,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v6';
+var APP_VER   = 'v7';
 
 /* ==================================================================
    EJERCICIOS
@@ -479,37 +518,41 @@ var APP_VER   = 'v6';
    g  = tren: superior | medio | inferior
    s  = series por defecto   r = reps por defecto
    ================================================================== */
-/* m = musculo, mas fino que el tren. Sirve para el balance semanal y las sugerencias. */
+/* m = musculo (mas fino que el tren, para el balance semanal y las sugerencias)
+   d = descanso sugerido en segundos entre series.
+       Compuestos 120-150 s, aislamiento 60-90 s, core 45 s. Sale de la literatura de
+       hipertrofia: por debajo de 60 s el crecimiento sufre, y un compuesto genera mas
+       fatiga que un aislamiento. NO depende del peso. */
 var RUTINA_BASE = [
-  {id:'a0', n:'Sentadilla en m&aacute;quina Smith o Hack squat', p:'Sentadilla en maquina Smith', g:'inferior', m:'piernas', s:3, r:12},
-  {id:'a1', n:'Tir&oacute;n dorsal en polea, agarre prono',      p:'Tiron dorsal en polea agarre prono', g:'superior', m:'espalda', s:4, r:12},
-  {id:'a2', n:'Remo en polea baja',                              p:'Remo en polea baja', g:'superior', m:'espalda', s:3, r:15},
-  {id:'a3', n:'Dorsal Hammer a 1 brazo',                         p:'Dorsal Hammer a un brazo', g:'superior', m:'espalda', s:3, r:8},
-  {id:'b5', n:'Vuelos laterales con mancuernas',                 p:'Vuelos laterales con mancuernas', g:'superior', m:'hombros', s:3, r:12},
-  {id:'a5', n:'B&iacute;ceps alternado con mancuernas',          p:'Biceps alternado con mancuernas', g:'superior', m:'biceps', s:3, r:12},
-  {id:'a6', n:'B&iacute;ceps martillo',                          p:'Biceps martillo', g:'superior', m:'biceps', s:3, r:10},
-  {id:'a7', n:'Abdominal recto largo (con disco)',               p:'Abdominal recto largo con disco', g:'medio', m:'core', s:3, r:12},
-  {id:'a8', n:'Abdominales oblicuos alternados',                 p:'Abdominales oblicuos alternados', g:'medio', m:'core', s:3, r:15},
-  {id:'a9', n:'Abdominales en captain&#39;s chair',              p:'Abdominal en captain chair silla romana', g:'medio', m:'core', s:3, r:15},
-  {id:'c3', n:'Empuje de pecho declinado en multipower',         p:'Press de pecho declinado en multipower', g:'superior', m:'pecho', s:3, r:12}
+  {id:'a0', n:'Sentadilla en m&aacute;quina Smith o Hack squat', p:'Sentadilla en maquina Smith', g:'inferior', m:'piernas', s:3, r:12, d:120},
+  {id:'a1', n:'Tir&oacute;n dorsal en polea, agarre prono',      p:'Tiron dorsal en polea agarre prono', g:'superior', m:'espalda', s:4, r:12, d:120},
+  {id:'a2', n:'Remo en polea baja',                              p:'Remo en polea baja', g:'superior', m:'espalda', s:3, r:15, d:120},
+  {id:'a3', n:'Dorsal Hammer a 1 brazo',                         p:'Dorsal Hammer a un brazo', g:'superior', m:'espalda', s:3, r:8, d:120},
+  {id:'b5', n:'Vuelos laterales con mancuernas',                 p:'Vuelos laterales con mancuernas', g:'superior', m:'hombros', s:3, r:12, d:60},
+  {id:'a5', n:'B&iacute;ceps alternado con mancuernas',          p:'Biceps alternado con mancuernas', g:'superior', m:'biceps', s:3, r:12, d:60},
+  {id:'a6', n:'B&iacute;ceps martillo',                          p:'Biceps martillo', g:'superior', m:'biceps', s:3, r:10, d:60},
+  {id:'a7', n:'Abdominal recto largo (con disco)',               p:'Abdominal recto largo con disco', g:'medio', m:'core', s:3, r:12, d:45},
+  {id:'a8', n:'Abdominales oblicuos alternados',                 p:'Abdominales oblicuos alternados', g:'medio', m:'core', s:3, r:15, d:45},
+  {id:'a9', n:'Abdominales en captain&#39;s chair',              p:'Abdominal en captain chair silla romana', g:'medio', m:'core', s:3, r:15, d:45},
+  {id:'c3', n:'Empuje de pecho declinado en multipower',         p:'Press de pecho declinado en multipower', g:'superior', m:'pecho', s:3, r:12, d:120}
 ];
 
 /* Sugerencias al agregar un ejercicio (los viejos dias B y C + los que saque de la base) */
 var CATALOGO = [
-  {id:'a4', n:'Vuelos posteriores en m&aacute;quina',            p:'Vuelos posteriores en maquina', g:'superior', m:'hombros', s:3, r:12},
-  {id:'b0', n:'Prensa Hammer 45&deg;',                           p:'Prensa Hammer 45 grados', g:'inferior', m:'piernas', s:3, r:12},
-  {id:'b1', n:'Flexi&oacute;n de rodillas acostado',             p:'Flexion de rodillas acostado femoral', g:'inferior', m:'piernas', s:3, r:12},
-  {id:'b2', n:'Extensi&oacute;n de rodillas en m&aacute;quina',  p:'Extension de rodillas en maquina', g:'inferior', m:'piernas', s:3, r:15},
-  {id:'b3', n:'Puente de gl&uacute;teos / hip thrust',           p:'Hip thrust puente de gluteos', g:'inferior', m:'gluteos', s:3, r:12},
-  {id:'b4', n:'Empuje de hombros en Hammer',                     p:'Empuje de hombros en Hammer', g:'superior', m:'hombros', s:3, r:12},
-  {id:'b6', n:'Vuelos frontales con disco',                      p:'Vuelos frontales con disco', g:'superior', m:'hombros', s:2, r:10},
-  {id:'c0', n:'Peso muerto rumano con mancuernas (RDL)',         p:'Peso muerto rumano con mancuernas', g:'inferior', m:'piernas', s:3, r:10},
-  {id:'c1', n:'Empuje de pecho en m&aacute;quina',               p:'Empuje de pecho en maquina', g:'superior', m:'pecho', s:3, r:12},
-  {id:'c2', n:'Apertura de pecho en m&aacute;quina',             p:'Apertura de pecho en maquina peck deck', g:'superior', m:'pecho', s:3, r:15},
-  {id:'c4', n:'Fondos de tr&iacute;ceps en banco',               p:'Fondos de triceps en banco', g:'superior', m:'triceps', s:3, r:10},
-  {id:'c5', n:'Press franc&eacute;s con barra Ez',               p:'Press frances con barra Z', g:'superior', m:'triceps', s:3, r:8},
-  {id:'c6', n:'Abdominales bisagra a una pierna',                p:'Abdominal bisagra a una pierna', g:'medio', m:'core', s:3, r:10},
-  {id:'c7', n:'Espinales en colchoneta',                         p:'Espinales en colchoneta lumbares', g:'medio', m:'core', s:3, r:12}
+  {id:'a4', n:'Vuelos posteriores en m&aacute;quina',            p:'Vuelos posteriores en maquina', g:'superior', m:'hombros', s:3, r:12, d:60},
+  {id:'b0', n:'Prensa Hammer 45&deg;',                           p:'Prensa Hammer 45 grados', g:'inferior', m:'piernas', s:3, r:12, d:150},
+  {id:'b1', n:'Flexi&oacute;n de rodillas acostado',             p:'Flexion de rodillas acostado femoral', g:'inferior', m:'piernas', s:3, r:12, d:90},
+  {id:'b2', n:'Extensi&oacute;n de rodillas en m&aacute;quina',  p:'Extension de rodillas en maquina', g:'inferior', m:'piernas', s:3, r:15, d:90},
+  {id:'b3', n:'Puente de gl&uacute;teos / hip thrust',           p:'Hip thrust puente de gluteos', g:'inferior', m:'gluteos', s:3, r:12, d:120},
+  {id:'b4', n:'Empuje de hombros en Hammer',                     p:'Empuje de hombros en Hammer', g:'superior', m:'hombros', s:3, r:12, d:120},
+  {id:'b6', n:'Vuelos frontales con disco',                      p:'Vuelos frontales con disco', g:'superior', m:'hombros', s:2, r:10, d:60},
+  {id:'c0', n:'Peso muerto rumano con mancuernas (RDL)',         p:'Peso muerto rumano con mancuernas', g:'inferior', m:'piernas', s:3, r:10, d:120},
+  {id:'c1', n:'Empuje de pecho en m&aacute;quina',               p:'Empuje de pecho en maquina', g:'superior', m:'pecho', s:3, r:12, d:120},
+  {id:'c2', n:'Apertura de pecho en m&aacute;quina',             p:'Apertura de pecho en maquina peck deck', g:'superior', m:'pecho', s:3, r:15, d:60},
+  {id:'c4', n:'Fondos de tr&iacute;ceps en banco',               p:'Fondos de triceps en banco', g:'superior', m:'triceps', s:3, r:10, d:90},
+  {id:'c5', n:'Press franc&eacute;s con barra Ez',               p:'Press frances con barra Z', g:'superior', m:'triceps', s:3, r:8, d:60},
+  {id:'c6', n:'Abdominales bisagra a una pierna',                p:'Abdominal bisagra a una pierna', g:'medio', m:'core', s:3, r:10, d:45},
+  {id:'c7', n:'Espinales en colchoneta',                         p:'Espinales en colchoneta lumbares', g:'medio', m:'core', s:3, r:12, d:45}
 ];
 
 /* Musculos, con el tren al que pertenecen. El orden es el que se muestra. */
@@ -561,6 +604,7 @@ var histView = 'lista';  // 'lista' | 'cal'
 var calRef = null;       // mes que muestra el calendario
 var openSession = null;  // clave de la tarjeta expandida en el historial
 var cardioDraft = null;  // corrida que se esta cargando/editando en el modal
+var openEx = null;       // ejercicio expandido en Entrenar (uno a la vez)
 var newEx = {name:'', w:'', s:'3', r:'12'};  // form de "cargar a mano", fuera del DOM
 var draftDirty = false;  // hay cambios sin guardar en la sesion en curso
 
@@ -850,41 +894,75 @@ function buildTrain(){
     var def = exDef(id);
     var yq  = def ? def.p : st.name;
 
-    h += '<div class="ex'+(st.done?' done':'')+'" id="ex-'+id+'">';
-    h +=   '<div class="ex-top">';
-    h +=     '<button class="chk'+(st.done?' on':'')+'" onclick="toggleEx(\''+id+'\')">'+
+    var abierto = (openEx === id);
+
+    h += '<div class="ex'+(st.done?' done':'')+(abierto?' open':'')+'" id="ex-'+id+'">';
+
+    /* cabecera: siempre visible, solo el nombre. Tocarla abre o cierra. */
+    h +=   '<div class="ex-head">';
+    h +=     '<button class="chk'+(st.done?' on':'')+'" onclick="toggleEx(\''+id+'\');event.stopPropagation()">'+
              '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></button>';
-    h +=     '<div class="ex-body"><div class="ex-n">'+dispName(id, st.name)+'</div>'+
-             '<span class="gpill '+st.group+'">'+GRUPOS[st.group].lbl+'</span></div>';
-    h +=     '<div class="ex-acts">'+
-             '<button class="iconbtn yt" onclick="yt(\''+jsq(yq)+'\')" title="Ver t&eacute;cnica">'+
-             '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>'+
-             '<button class="iconbtn rm" onclick="removeEx(\''+id+'\')" title="Sacar de esta sesi&oacute;n">'+
-             '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
-             '</div>';
+    h +=     '<button class="ex-ttl" onclick="toggleOpen(\''+id+'\')">'+dispName(id, st.name)+'</button>';
+    h +=     '<button class="ex-chev" onclick="toggleOpen(\''+id+'\')">'+
+             '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>';
     h +=   '</div>';
 
-    h +=   '<div class="fields">';
-    h +=     '<div class="fld"><input type="number" step="0.5" min="0" inputmode="decimal" placeholder="&mdash;" '+
-             'value="'+esc(st.weight)+'" oninput="setF(\''+id+'\',\'weight\',this.value)"><span>kg</span></div>';
-    h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
-             'value="'+esc(st.series)+'" oninput="setF(\''+id+'\',\'series\',this.value)"><span>ser</span></div>';
-    h +=     '<span class="xsep">&times;</span>';
-    h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
-             'value="'+esc(st.reps)+'" oninput="setF(\''+id+'\',\'reps\',this.value)"><span>rep</span></div>';
-    h +=   '</div>';
+    /* detalle: solo se arma si esta abierto */
+    if(abierto){
+      h += '<div class="ex-det">';
 
-    h +=   '<div class="lastline">';
-    if(rec){
-      h +=   '<span class="meta">&Uacute;ltimo: <b>'+fKg(rec.weight)+' kg</b>'+
-             (rec.series&&rec.reps?' &middot; '+esc(rec.series)+'x'+esc(rec.reps):'')+
-             ' &middot; '+fShort(rec.date)+'</span>';
-      if(sg) h += '<button class="sug '+(sg.up?'up':'same')+'" onclick="applySug(\''+id+'\','+sg.v+')">'+
-                  (sg.up?'&#9650; Sub&iacute; a '+fKg(sg.v):'Repet&iacute; '+fKg(sg.v))+' kg</button>';
-    } else {
-      h +=   '<span class="meta">Sin registro previo</span>';
+      h +=   '<div class="ex-sub">';
+      h +=     '<span class="gpill '+st.group+'">'+GRUPOS[st.group].lbl+'</span>';
+      h +=     '<div class="ex-acts">'+
+               '<button class="iconbtn yt" onclick="yt(\''+jsq(yq)+'\')" title="Ver t&eacute;cnica">'+
+               '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>'+
+               '<button class="iconbtn rm" onclick="removeEx(\''+id+'\')" title="Sacar de esta sesi&oacute;n">'+
+               '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>'+
+               '</div>';
+      h +=   '</div>';
+
+      h +=   '<div class="fields">';
+      h +=     '<div class="fld"><input type="number" step="0.5" min="0" inputmode="decimal" placeholder="&mdash;" '+
+               'value="'+esc(st.weight)+'" oninput="setF(\''+id+'\',\'weight\',this.value)"><span>kg</span></div>';
+      h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
+               'value="'+esc(st.series)+'" oninput="setF(\''+id+'\',\'series\',this.value)"><span>ser</span></div>';
+      h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
+               'value="'+esc(st.reps)+'" oninput="setF(\''+id+'\',\'reps\',this.value)"><span>rep</span></div>';
+      h +=   '</div>';
+
+      /* RIR: pills en vez de input. Es un numero de 0 a 4, un toque es mas rapido que teclear */
+      h +=   '<div class="rirbox">';
+      h +=     '<span class="rirlbl">RIR<span class="rirq" onclick="toast(\'RIR = repeticiones en reserva: cu&amp;aacute;ntas te quedaban al terminar la serie. 0 = al fallo.\')">?</span></span>';
+      h +=     '<div class="rirpills">';
+      ['0','1','2','3','4'].forEach(function(v){
+        h += '<button class="rirp'+(st.rir===v?' on':'')+'" onclick="setRir(\''+id+'\',\''+v+'\')">'+
+             (v==='4'?'4+':v)+'</button>';
+      });
+      h +=     '</div>';
+      h +=   '</div>';
+
+      /* timer de descanso */
+      var seg = restDe(id);
+      h +=   '<div class="restbox">';
+      h +=     '<button class="restbtn" id="rest-btn-'+id+'" onclick="iniciarDescanso(\''+id+'\','+seg+')">'+
+               '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>'+
+               '<span id="rest-'+id+'">Descansar '+fDur(seg)+'</span></button>';
+      h +=   '</div>';
+
+      h +=   '<div class="lastline">';
+      if(rec){
+        h +=   '<span class="meta">&Uacute;ltimo: <b>'+fKg(rec.weight)+' kg</b>'+
+               (rec.series&&rec.reps?' &middot; '+esc(rec.series)+'x'+esc(rec.reps):'')+
+               (rec.rir!==''&&rec.rir!==undefined?' &middot; RIR '+esc(rec.rir):'')+
+               ' &middot; '+fShort(rec.date)+'</span>';
+        if(sg) h += '<button class="sug '+(sg.up?'up':'same')+'" onclick="applySug(\''+id+'\','+sg.v+')">'+
+                    (sg.up?'&#9650; Sub&iacute; a '+fKg(sg.v):'Repet&iacute; '+fKg(sg.v))+' kg</button>';
+      } else {
+        h +=   '<span class="meta">Sin registro previo</span>';
+      }
+      h +=   '</div>';
+      h += '</div>';
     }
-    h +=   '</div>';
     h += '</div>';
   });
 
@@ -905,7 +983,99 @@ function buildTrain(){
   $('p-train').innerHTML = h;
 }
 
-function pickDate(v){ if(!v) return; curDate=v; draftDirty=false; loadDraft(); buildTrain(); }
+/* Un ejercicio abierto a la vez. Arrancan todos cerrados: con 11 ejercicios abiertos
+   la lista mide varias pantallas y hay que scrollear mucho para encontrar el que toca. */
+function toggleOpen(id){
+  openEx = (openEx===id) ? null : id;
+  pararDescanso();
+  buildTrain();
+  if(openEx){
+    setTimeout(function(){
+      var el = $('ex-'+openEx);
+      if(el) el.scrollIntoView({block:'nearest'});
+    }, 30);
+  }
+}
+function setRir(id,v){
+  if(!draft[id]) return;
+  draft[id].rir = (draft[id].rir===v) ? '' : v;   /* volver a tocar lo saca */
+  draftDirty = true;
+  buildTrain();
+}
+/* descanso sugerido del ejercicio, con lo que Diego haya elegido para el si lo cambio */
+function restDe(id){
+  var e = exDef(id);
+  var base = (e && e.d) ? e.d : 90;
+  try{
+    var v = parseInt(localStorage.getItem('gym_rest_'+id)||'', 10);
+    if(v>0) return v;
+  }catch(err){}
+  return base;
+}
+
+/* ---- timer de descanso ----
+   Se cuenta contra un timestamp, no sumando ticks: en iOS el setInterval se frena
+   cuando la pantalla se bloquea, y el descanso quedaria corriendo mal. */
+var restTimer = null, audioCtx = null;
+function iniciarDescanso(id, seg){
+  pararDescanso();
+  try{
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if(AC && !audioCtx) audioCtx = new AC();   /* crear en el gesto: iOS no deja despues */
+  }catch(e){}
+  restTimer = { id:id, hasta: Date.now() + seg*1000 };
+  restTimer.tick = setInterval(pintarDescanso, 250);
+  pintarDescanso();
+}
+function pararDescanso(termino){
+  if(restTimer && restTimer.tick) clearInterval(restTimer.tick);
+  if(restTimer && !termino){
+    var b = $('rest-btn-'+restTimer.id);
+    if(b) b.classList.remove('corriendo');
+    var el = $('rest-'+restTimer.id);
+    if(el) el.innerHTML = 'Descansar '+fDur(restDe(restTimer.id));
+  }
+  restTimer = null;
+}
+function pintarDescanso(){
+  if(!restTimer) return;
+  var falta = Math.round((restTimer.hasta - Date.now())/1000);
+  var el = $('rest-'+restTimer.id), b = $('rest-btn-'+restTimer.id);
+  if(!el){ pararDescanso(); return; }          /* se cerro el ejercicio */
+  if(falta > 0){
+    el.textContent = fDur(falta);
+    if(b) b.classList.add('corriendo');
+    return;
+  }
+  el.innerHTML = 'Listo &middot; a la siguiente';
+  if(b){ b.classList.remove('corriendo'); b.classList.add('listo'); }
+  beep();
+  var idFin = restTimer.id;
+  pararDescanso(true);
+  setTimeout(function(){
+    var e2=$('rest-'+idFin), b2=$('rest-btn-'+idFin);
+    if(e2) e2.innerHTML = 'Descansar '+fDur(restDe(idFin));
+    if(b2) b2.classList.remove('listo');
+  }, 6000);
+}
+function beep(){
+  try{
+    if(!audioCtx) return;
+    if(audioCtx.state==='suspended') audioCtx.resume();
+    [0, 0.22].forEach(function(t){
+      var o=audioCtx.createOscillator(), g=audioCtx.createGain();
+      o.connect(g); g.connect(audioCtx.destination);
+      o.type='sine'; o.frequency.value=880;
+      var t0=audioCtx.currentTime+t;
+      g.gain.setValueAtTime(0.0001,t0);
+      g.gain.exponentialRampToValueAtTime(0.25,t0+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001,t0+0.18);
+      o.start(t0); o.stop(t0+0.2);
+    });
+  }catch(e){}
+}
+
+function pickDate(v){ if(!v) return; curDate=v; draftDirty=false; openEx=null; pararDescanso(); loadDraft(); buildTrain(); }
 function toggleEx(id){ if(draft[id]){ draft[id].done=!draft[id].done; draftDirty=true; buildTrain(); } }
 function setF(id,f,v){ if(draft[id]){ draft[id][f]=String(v||'').trim(); draftDirty=true; } }
 function applySug(id,v){ if(draft[id]){ draft[id].weight=String(v); draftDirty=true; buildTrain(); } }
@@ -932,13 +1102,13 @@ function loadDraft(){
     (s.order && s.order.length ? s.order : Object.keys(s.items)).forEach(function(id){
       var it=s.items[id]; if(!it) return;
       draft[id]={name:it.name, group:it.group||'superior', weight:it.weight||'',
-                 series:it.series||'', reps:it.reps||'', done:it.done===true};
+                 series:it.series||'', reps:it.reps||'', rir:it.rir||'', done:it.done===true};
       draftOrder.push(id);
     });
     notesDraft = s.notes||'';
   } else {
     RUTINA_BASE.forEach(function(e){
-      draft[e.id]={name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), done:false};
+      draft[e.id]={name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
       draftOrder.push(e.id);
     });
   }
@@ -1074,8 +1244,9 @@ function setNewGroup(g){
 function addFromCat(id){
   var e = allKnown()[id];
   if(!e) return;
-  draft[id] = {name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), done:true};
+  draft[id] = {name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
   draftOrder.push(id);
+  openEx = id;
   var rec = lastRecord(id);
   if(rec){
     var sg = suggest(rec);
@@ -1099,9 +1270,10 @@ function addCustom(){
     weight:String(newEx.w||'').trim(),
     series:String(newEx.s||'3').trim(),
     reps:String(newEx.r||'12').trim(),
-    done:false
+    rir:'', done:false
   };
   draftOrder.push(id);
+  openEx = id;
   draftDirty = true;
   closeModal(); buildTrain();
   toast('Agregado &middot; tildalo cuando lo hagas','ok');
@@ -1114,7 +1286,7 @@ function saveSession(){
   draftOrder.forEach(function(id){
     var st=draft[id]; if(!st) return;
     items[id]={name:st.name, group:st.group, weight:st.weight||'',
-               series:st.series||'', reps:st.reps||'', done:st.done===true};
+               series:st.series||'', reps:st.reps||'', rir:st.rir||'', done:st.done===true};
     order.push(id);
     if(st.done) any=true;
   });

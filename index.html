@@ -469,7 +469,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v5';
+var APP_VER   = 'v6';
 
 /* ==================================================================
    EJERCICIOS
@@ -2028,7 +2028,8 @@ function mostrarOffline(){
   if(!b) return;
   var cuando = (D && D.lastUpdate) ? D.lastUpdate : '';
   $('offline-txt').innerHTML = 'No pude conectarme. Est&aacute;s viendo los datos guardados' +
-    (cuando ? ' del <b>'+cuando+'</b>' : '') + ', puede faltar lo &uacute;ltimo.';
+    (cuando ? ' del <b>'+cuando+'</b>' : '') + ', puede faltar lo &uacute;ltimo.' +
+    (_ultimoError ? '<br><span style="opacity:.75;font-size:.9em">Motivo: '+esc(_ultimoError)+'</span>' : '');
   b.classList.remove('hide');
 }
 function ocultarOffline(){
@@ -2045,24 +2046,52 @@ function reintentar(){
 var _retry=0;
 /* trasGuardar: el refresco que sigue a un guardado exitoso. Si falla, el dato YA esta
    en la planilla, asi que el mensaje no debe decir que algo salio mal. */
+var _ultimoError = '';
+
+/* Lectura por fetch(), el MISMO camino que usa el guardado.
+   Antes esto era JSONP (un <script src>). El 02/09 el guardado funcionaba en el iPhone de
+   Diego pero la lectura no: Safari trata distinto un script de otro dominio (prevencion de
+   rastreo entre sitios) que una peticion fetch. Con fetch los dos caminos son iguales, y
+   ademas se puede saber POR QUE fallo en vez de adivinar.
+   El JSONP queda como respaldo por si fetch se topa con CORS en algun contexto. */
 function fetchData(trasGuardar){
   if(API_URL.indexOf('PEGAR_ACA')===0){ hideLoad(); toast('Falta la URL del Apps Script','err'); return; }
+
+  var ctrl = null, timer = null;
+  try{ ctrl = new AbortController(); }catch(e){}
+  var opts = ctrl ? {signal:ctrl.signal} : {};
+  if(ctrl) timer = setTimeout(function(){ try{ ctrl.abort(); }catch(e){} }, 30000);
+
+  fetch(API_URL+'?t='+Date.now(), opts)
+    .then(function(r){
+      if(!r.ok) throw new Error('El servidor respondio ' + r.status);
+      return r.json();
+    })
+    .then(function(data){
+      if(timer) clearTimeout(timer);
+      onDatos(data, trasGuardar);
+    })
+    .catch(function(e){
+      if(timer) clearTimeout(timer);
+      var m = String(e && e.message ? e.message : e);
+      _ultimoError = (m.indexOf('abort')!==-1) ? 'Tard&oacute; m&aacute;s de 30 segundos' : m;
+      /* segundo intento por JSONP: si fetch choca con CORS, esto igual pasa */
+      fetchJSONP(trasGuardar);
+    });
+}
+
+/* respaldo: el metodo viejo, por si fetch no puede */
+function fetchJSONP(trasGuardar){
   var old=$('_jp'); if(old) old.remove();
   var cb='gymCb_'+Date.now();
   window[cb]=function(data){
-    _retry=0; delete window[cb];
+    delete window[cb];
     var s=$('_jp'); if(s) s.remove();
-    if(data.error){ hideLoad(); toast(data.error,'err'); return; }
-    D=data;
-    try{ localStorage.setItem('gym_cache', JSON.stringify(data)); }catch(e){}
-    if(D.allowed_emails && D.allowed_emails.length && D.allowed_emails.indexOf(userEmail)===-1){ showDenied(); return; }
-    $('h-update').innerHTML=APP_VER+' &middot; '+(D.lastUpdate||'');
-    ocultarOffline();
-    afterData(); hideLoad();
+    onDatos(data, trasGuardar);
   };
   var onErr=function(){
     delete window[cb];
-    if(_retry<3){ _retry++; setTimeout(function(){ fetchData(trasGuardar); },2500); return; }
+    if(_retry<2){ _retry++; setTimeout(function(){ fetchData(trasGuardar); },2500); return; }
     _retry=0; hideLoad();
     if(trasGuardar){
       /* lo importante ya se guardo: no alarmar */
@@ -2075,7 +2104,18 @@ function fetchData(trasGuardar){
   var sc=document.createElement('script');
   sc.id='_jp'; sc.src=API_URL+'?callback='+cb+'&t='+Date.now(); sc.onerror=onErr;
   document.head.appendChild(sc);
-  setTimeout(function(){ if(window[cb]) onErr(); },35000);   /* en 4G 20s no alcanzaba */
+  setTimeout(function(){ if(window[cb]) onErr(); },30000);
+}
+
+function onDatos(data, trasGuardar){
+  _retry=0; _ultimoError='';
+  if(!data || data.error){ hideLoad(); toast((data && data.error) || 'Respuesta vac&iacute;a','err'); return; }
+  D=data;
+  try{ localStorage.setItem('gym_cache', JSON.stringify(data)); }catch(e){}
+  if(D.allowed_emails && D.allowed_emails.length && D.allowed_emails.indexOf(userEmail)===-1){ showDenied(); return; }
+  $('h-update').innerHTML=APP_VER+' &middot; '+(D.lastUpdate||'');
+  ocultarOffline();
+  afterData(); hideLoad();
 }
 
 var _first=true;

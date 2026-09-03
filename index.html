@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0E0E14">
+<!-- Safari en iOS cachea el HTML con ganas: sin esto, despues de subir una version nueva
+     el celular sigue corriendo la vieja por horas. Ver APP_VER mas abajo. -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Gym Bro</title>
 <meta name="apple-mobile-web-app-title" content="Gym Bro">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -460,6 +465,11 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 var CLIENT_ID = '124091853515-85ca8o8vd3nfd2nibct9qrq75tmqqdr1.apps.googleusercontent.com';
 var API_URL   = 'https://script.google.com/macros/s/AKfycbz2ESDui9gBFHc-PcqSGHrH5ISV3QZAGRzOz0gMcN4_GOCIdPvH4y0VMcGk_kCg4mC5/exec';
 var SECRET    = 'gym-diego-2026';
+
+/* Version visible en el header. Subir este numero en CADA deploy.
+   Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
+   cacheada por Safari, sin tener que adivinar. */
+var APP_VER   = 'v5';
 
 /* ==================================================================
    EJERCICIOS
@@ -2027,7 +2037,7 @@ function ocultarOffline(){
 }
 function reintentar(){
   ocultarOffline();
-  $('h-update').textContent = 'Actualizando...';
+  $('h-update').innerHTML = APP_VER+' &middot; actualizando...';
   _retry = 0;
   fetchData();
 }
@@ -2046,7 +2056,7 @@ function fetchData(trasGuardar){
     D=data;
     try{ localStorage.setItem('gym_cache', JSON.stringify(data)); }catch(e){}
     if(D.allowed_emails && D.allowed_emails.length && D.allowed_emails.indexOf(userEmail)===-1){ showDenied(); return; }
-    $('h-update').textContent='Actualizado '+(D.lastUpdate||'');
+    $('h-update').innerHTML=APP_VER+' &middot; '+(D.lastUpdate||'');
     ocultarOffline();
     afterData(); hideLoad();
   };
@@ -2058,7 +2068,7 @@ function fetchData(trasGuardar){
       /* lo importante ya se guardo: no alarmar */
       toast('Guardado. No pude refrescar la pantalla, pero el dato est&aacute; a salvo.','ok');
     } else {
-      $('h-update').innerHTML='Sin conexi&oacute;n';   /* innerHTML: textContent no decodifica la entidad */
+      $('h-update').innerHTML=APP_VER+' &middot; sin conexi&oacute;n';   /* innerHTML: textContent no decodifica la entidad */
       mostrarOffline();
     }
   };

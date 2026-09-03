@@ -1102,7 +1102,7 @@ function saveSession(){
     .then(function(){
       draftDirty = false;
       toast('Sesi&oacute;n guardada &middot; '+fShort(curDate),'ok');
-      fetchData();
+      fetchData(true);
     })
     .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
 }
@@ -1286,7 +1286,7 @@ function saveCardio(){
   c.ritmo = String(ritmoDe(c.dur, c.km));
   if(!c.id) c.id = c.date + 'T' + (c.time || '00:00');
   apiPost('saveCardio', c, $('btn-cardio'))
-    .then(function(){ closeModal(); toast('Corrida guardada','ok'); fetchData(); })
+    .then(function(){ closeModal(); toast('Corrida guardada','ok'); fetchData(true); })
     .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
 }
 /* pide confirmacion: el boton es rojo, ancho completo y esta pegado abajo de "Guardar" */
@@ -1296,7 +1296,7 @@ function delCardio(id){
   var q = c ? (c.type+' del '+fShort(c.date)+(c.time?' '+c.time:'')) : 'esta corrida';
   if(!window.confirm('Borrar ' + q + '?\n\nNo se puede deshacer.')) return;
   apiPost('deleteCardio', {id:id})
-    .then(function(){ closeModal(); toast('Corrida borrada','ok'); fetchData(); })
+    .then(function(){ closeModal(); toast('Corrida borrada','ok'); fetchData(true); })
     .catch(function(e){ toast('No pude borrar: '+e.message,'err'); });
 }
 
@@ -1933,7 +1933,7 @@ function saveBody(){
   if(!date){ toast('Eleg&iacute; una fecha','err'); return; }
   if(!w){ toast('Falta el peso','err'); return; }
   apiPost('saveBody',{date:date, weight:w, waist:wa}, $('btn-body'))
-    .then(function(){ toast('Medici&oacute;n guardada','ok'); fetchData(); })
+    .then(function(){ toast('Medici&oacute;n guardada','ok'); fetchData(true); })
     .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
 }
 
@@ -1996,8 +1996,31 @@ function apiPost(action,payload,btn){
     .finally(function(){ if(btn){ btn.disabled=false; btn.innerHTML=old; } });
 }
 
+/* Aviso fijo de que estas viendo datos viejos. Un toast se va solo y deja al usuario
+   creyendo que la pantalla esta al dia; esto queda hasta que la conexion vuelve. */
+function mostrarOffline(){
+  var b = $('offline');
+  if(!b) return;
+  var cuando = (D && D.lastUpdate) ? D.lastUpdate : '';
+  $('offline-txt').innerHTML = 'No pude conectarme. Est&aacute;s viendo los datos guardados' +
+    (cuando ? ' del <b>'+cuando+'</b>' : '') + ', puede faltar lo &uacute;ltimo.';
+  b.classList.remove('hide');
+}
+function ocultarOffline(){
+  var b = $('offline');
+  if(b) b.classList.add('hide');
+}
+function reintentar(){
+  ocultarOffline();
+  $('h-update').textContent = 'Actualizando...';
+  _retry = 0;
+  fetchData();
+}
+
 var _retry=0;
-function fetchData(){
+/* trasGuardar: el refresco que sigue a un guardado exitoso. Si falla, el dato YA esta
+   en la planilla, asi que el mensaje no debe decir que algo salio mal. */
+function fetchData(trasGuardar){
   if(API_URL.indexOf('PEGAR_ACA')===0){ hideLoad(); toast('Falta la URL del Apps Script','err'); return; }
   var old=$('_jp'); if(old) old.remove();
   var cb='gymCb_'+Date.now();
@@ -2013,8 +2036,15 @@ function fetchData(){
   };
   var onErr=function(){
     delete window[cb];
-    if(_retry<3){ _retry++; setTimeout(fetchData,2500); }
-    else { _retry=0; hideLoad(); toast('No pude cargar los datos. Prob&aacute; de nuevo.','err'); }
+    if(_retry<3){ _retry++; setTimeout(function(){ fetchData(trasGuardar); },2500); return; }
+    _retry=0; hideLoad();
+    if(trasGuardar){
+      /* lo importante ya se guardo: no alarmar */
+      toast('Guardado. No pude refrescar la pantalla, pero el dato est&aacute; a salvo.','ok');
+    } else {
+      $('h-update').innerHTML='Sin conexi&oacute;n';   /* innerHTML: textContent no decodifica la entidad */
+      mostrarOffline();
+    }
   };
   var sc=document.createElement('script');
   sc.id='_jp'; sc.src=API_URL+'?callback='+cb+'&t='+Date.now(); sc.onerror=onErr;
@@ -2055,21 +2085,37 @@ function tryCache(){
 /* ==================================================================
    AUTH
    ================================================================== */
+/* La sesion dura 30 dias, no 55 minutos.
+   El access_token de Google expira en 1 hora, pero la app NO lo necesita para operar:
+   fetchData es JSONP (sin token) y apiPost se valida contra la hoja ACCESO por email.
+   El token solo servia para averiguar el mail al ingresar. Atar la sesion a su
+   vencimiento hacia que Diego tuviera que loguearse cada hora. */
+var SESION_DIAS = 30;
 function saveSess(){
   try{
-    localStorage.setItem('gym_tok',accessToken);
-    localStorage.setItem('gym_mail',userEmail);
-    localStorage.setItem('gym_exp',String(Date.now()+55*60*1000));
+    localStorage.setItem('gym_mail', userEmail);
+    localStorage.setItem('gym_exp', String(Date.now() + SESION_DIAS*24*60*60*1000));
+    if(accessToken) localStorage.setItem('gym_tok', accessToken);
   }catch(e){}
 }
 function loadSess(){
   try{
-    var tok=localStorage.getItem('gym_tok');
     var exp=parseInt(localStorage.getItem('gym_exp')||'0',10);
     var em=(localStorage.getItem('gym_mail')||'').toLowerCase().trim();
-    if(tok && exp>Date.now() && em){ accessToken=tok; userEmail=em; return true; }
+    if(em && exp>Date.now()){
+      userEmail=em;
+      accessToken=localStorage.getItem('gym_tok')||null;
+      return true;
+    }
   }catch(e){}
   return false;
+}
+function clearSess(){
+  try{
+    localStorage.removeItem('gym_tok');
+    localStorage.removeItem('gym_exp');
+    localStorage.removeItem('gym_mail');
+  }catch(e){}
 }
 function showApp(){ $('login-screen').style.display='none'; $('app').style.display='block'; }
 function showDenied(){
@@ -2111,7 +2157,8 @@ window.addEventListener('load', function(){
   $('btn-login').addEventListener('click', function(){ tokenClient.requestAccessToken({prompt:'select_account'}); });
   $('btn-reload').addEventListener('click', function(){ fetchData(); toast('Actualizando...'); });
   $('btn-out').addEventListener('click', function(){
-    try{ localStorage.removeItem('gym_tok'); localStorage.removeItem('gym_exp'); }catch(e){}
+    if(draftDirty && !window.confirm('Ten&eacute;s una sesi&oacute;n sin guardar. Salir igual?')) return;
+    clearSess();
     if(accessToken && window.google && google.accounts){
       google.accounts.oauth2.revoke(accessToken, function(){ location.reload(); });
     } else location.reload();

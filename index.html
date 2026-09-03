@@ -151,7 +151,12 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
 /* --- tarjeta de ejercicio: colapsada por defecto --- */
 .ex-head{display:flex;align-items:center;gap:11px;padding:2px 0}
 .ex-ttl{flex:1;min-width:0;text-align:left;font-size:.94rem;font-weight:600;line-height:1.3;
-  letter-spacing:-.01em;padding:9px 0;color:var(--text)}
+  letter-spacing:-.01em;padding:9px 0;color:var(--text);display:block}
+/* resumen de lo cargado, visible con el bloque cerrado */
+.ex-res{display:block;margin-top:3px;font-family:'Asap Condensed',sans-serif;font-size:.74rem;
+  font-weight:700;letter-spacing:.07em;color:var(--muted);font-variant-numeric:tabular-nums}
+.ex.done .ex-res{color:var(--green-2)}
+.ex.open .ex-res{display:none}
 .ex-chev{flex:0 0 auto;width:36px;height:36px;display:flex;align-items:center;justify-content:center}
 .ex-chev svg{width:17px;height:17px;stroke:var(--dim);stroke-width:2.2;fill:none;
   stroke-linecap:round;stroke-linejoin:round;transition:.2s}
@@ -508,7 +513,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v7';
+var APP_VER   = 'v8';
 
 /* ==================================================================
    EJERCICIOS
@@ -670,7 +675,9 @@ function slug(s){
   return o.substring(0,40);
 }
 function nf(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
-function fKg(v){ var n=parseFloat(v); return isNaN(n)?'':(Math.round(n*10)/10).toString().replace('.',','); }
+/* hasta 2 decimales: Diego carga pesos como 11,25 kg y redondear a 1 decimal
+   los mostraba como 11,3, que no es lo que cargo. */
+function fKg(v){ var n=parseFloat(v); return isNaN(n)?'':(Math.round(n*100)/100).toString().replace('.',','); }
 /* distancias: 2 decimales, como los muestra la app Fitness */
 function fKm(v){ var n=parseFloat(v); return isNaN(n)?'':n.toFixed(2).replace('.',','); }
 function fInt(v){ return Math.round(nf(v)).toLocaleString('es-AR'); }
@@ -902,7 +909,16 @@ function buildTrain(){
     h +=   '<div class="ex-head">';
     h +=     '<button class="chk'+(st.done?' on':'')+'" onclick="toggleEx(\''+id+'\');event.stopPropagation()">'+
              '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg></button>';
-    h +=     '<button class="ex-ttl" onclick="toggleOpen(\''+id+'\')">'+dispName(id, st.name)+'</button>';
+    /* resumen bajo el nombre: lo cargado, para no tener que abrir el bloque al repasar */
+    var res = [];
+    if(nf(st.weight)) res.push(fKg(st.weight)+' kg');
+    if(st.series && st.reps) res.push(esc(st.series)+'x'+esc(st.reps));
+    if(st.rir !== '' && st.rir !== undefined) res.push('RIR '+esc(st.rir));
+
+    h +=     '<button class="ex-ttl" onclick="toggleOpen(\''+id+'\')">'+
+             dispName(id, st.name)+
+             (res.length ? '<span class="ex-res">'+res.join(' &middot; ')+'</span>' : '')+
+             '</button>';
     h +=     '<button class="ex-chev" onclick="toggleOpen(\''+id+'\')">'+
              '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>';
     h +=   '</div>';

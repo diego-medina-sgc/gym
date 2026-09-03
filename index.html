@@ -74,6 +74,15 @@ header{position:sticky;top:0;z-index:300;background:rgba(14,14,20,.92);backdrop-
 .ibtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
 
+#offline{background:var(--red-lt);border-bottom:1px solid rgba(255,77,94,.3);
+  padding:11px 16px;display:flex;align-items:center;gap:11px}
+#offline.hide{display:none}
+#offline svg{flex:0 0 auto;width:18px;height:18px;stroke:var(--red);stroke-width:2;fill:none}
+#offline p{font-size:.82rem;color:#FFA8B1;flex:1;line-height:1.35}
+#offline b{color:var(--red)}
+#offline button{flex:0 0 auto;background:var(--red);color:#fff;border-radius:9px;
+  padding:9px 15px;font-size:.8rem;font-weight:700;min-height:38px;
+  font-family:'Asap Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase}
 nav.tabs{position:sticky;top:57px;z-index:290;background:var(--bg);
   border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 nav.tabs::-webkit-scrollbar{display:none}
@@ -418,6 +427,12 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
     </button>
   </div>
 </header>
+
+<div id="offline" class="hide">
+  <svg viewBox="0 0 24 24"><path d="M1 1l22 22M16.7 16.7A10.9 10.9 0 0 1 12 18M5 12.5a10.9 10.9 0 0 1 4-2.4M2 8.8a16 16 0 0 1 4.2-2.7M22 8.8a16 16 0 0 0-9.6-3.7M12 22h.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <p id="offline-txt">Sin conexi&oacute;n.</p>
+  <button onclick="reintentar()">Reintentar</button>
+</div>
 
 <nav class="tabs">
   <button class="tab on" data-t="train">Entrenar</button>
@@ -2032,6 +2047,7 @@ function fetchData(trasGuardar){
     try{ localStorage.setItem('gym_cache', JSON.stringify(data)); }catch(e){}
     if(D.allowed_emails && D.allowed_emails.length && D.allowed_emails.indexOf(userEmail)===-1){ showDenied(); return; }
     $('h-update').textContent='Actualizado '+(D.lastUpdate||'');
+    ocultarOffline();
     afterData(); hideLoad();
   };
   var onErr=function(){

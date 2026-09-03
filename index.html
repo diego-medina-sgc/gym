@@ -37,6 +37,9 @@
   --safe-bot:env(safe-area-inset-bottom, 0px);
   --safe-l:env(safe-area-inset-left, 0px);
   --safe-r:env(safe-area-inset-right, 0px);
+  /* Aire extra bajo la isla SOLO en standalone. Con el safe-area justo el logo
+     queda a 13px de la Dynamic Island y se lee como cortado. */
+  --hdr-extra:0px;
   --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.28);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -72,7 +75,7 @@ input,textarea,select{font-family:inherit;color:inherit}
 #app{display:none}
 header{position:sticky;top:0;z-index:300;background:rgba(14,14,20,.92);backdrop-filter:blur(14px);
   border-bottom:1px solid var(--border);
-  padding:calc(11px + var(--safe-top)) calc(16px + var(--safe-r)) 11px calc(16px + var(--safe-l));
+  padding:calc(11px + var(--hdr-extra) + var(--safe-top)) calc(16px + var(--safe-r)) 11px calc(16px + var(--safe-l));
   display:flex;align-items:center;justify-content:space-between;gap:12px}
 .h-l{display:flex;align-items:center;gap:11px;min-width:0}
 .h-mark{width:33px;height:33px;border-radius:10px;flex:0 0 auto;
@@ -98,7 +101,7 @@ header{position:sticky;top:0;z-index:300;background:rgba(14,14,20,.92);backdrop-
 #offline button{flex:0 0 auto;background:var(--red);color:#fff;border-radius:9px;
   padding:9px 15px;font-size:.8rem;font-weight:700;min-height:38px;
   font-family:'Asap Condensed',sans-serif;letter-spacing:.08em;text-transform:uppercase}
-nav.tabs{position:sticky;top:calc(57px + var(--safe-top));z-index:290;background:var(--bg);
+nav.tabs{position:sticky;top:calc(57px + var(--hdr-extra) + var(--safe-top));z-index:290;background:var(--bg);
   border-bottom:1px solid var(--border);display:flex;overflow-x:auto;scrollbar-width:none}
 nav.tabs::-webkit-scrollbar{display:none}
 .tab{flex:1 0 auto;min-width:76px;padding:13px 10px 11px;font-family:'Asap Condensed',sans-serif;
@@ -434,11 +437,17 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 
 #toast{position:fixed;left:50%;bottom:calc(24px + var(--safe-bot));transform:translate(-50%,100px);z-index:800;
   background:var(--surface3);border:1px solid var(--border);border-radius:11px;padding:13px 20px;
-  font-size:.88rem;font-weight:500;box-shadow:var(--shadow);opacity:0;transition:.28s;max-width:88vw;text-align:center}
+  font-size:.88rem;font-weight:500;box-shadow:var(--shadow);opacity:0;transition:.28s;max-width:88vw;
+  text-align:center;line-height:1.5}
 #toast.show{transform:translate(-50%,0);opacity:1}
 #toast.ok{border-color:var(--green);color:var(--green-2)}
 #toast.err{border-color:var(--red);color:#FFA8B1}
 
+/* Cuando la app corre agregada a la pantalla de inicio (sin barra de Safari),
+   el contenido queda pegado a la isla. Este respiro no aplica en el navegador. */
+@media (display-mode:standalone), (display-mode:fullscreen){
+  :root{ --hdr-extra:14px; }
+}
 @media(min-width:720px){
   body{font-size:15.5px}
   main{padding:28px 32px 40px}
@@ -475,7 +484,7 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
     <div class="h-mark"><svg viewBox="0 0 32 32"><rect x="3" y="13" width="3" height="6" rx="1.3"/><rect x="6.5" y="10" width="4" height="12" rx="1.6"/><rect x="10.5" y="14.4" width="11" height="3.2" rx="1.4"/><rect x="21.5" y="10" width="4" height="12" rx="1.6"/><rect x="26" y="13" width="3" height="6" rx="1.3"/></svg></div>
     <div>
       <div class="h-t">Gym Bro</div>
-      <div class="h-d" id="h-update">&mdash;</div>
+      <div class="h-d" id="h-update" onclick="diag()">&mdash;</div>
     </div>
   </div>
   <div class="h-r">
@@ -524,7 +533,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v9';
+var APP_VER   = 'v10';
 
 /* ==================================================================
    EJERCICIOS
@@ -693,9 +702,30 @@ function fKg(v){ var n=parseFloat(v); return isNaN(n)?'':(Math.round(n*100)/100)
 function fKm(v){ var n=parseFloat(v); return isNaN(n)?'':n.toFixed(2).replace('.',','); }
 function fInt(v){ return Math.round(nf(v)).toLocaleString('es-AR'); }
 
-function toast(msg,type){
+function toast(msg,type,ms){
   var el=$('toast'); el.innerHTML=msg; el.className=(type||'')+' show';
-  clearTimeout(el._t); el._t=setTimeout(function(){ el.className=el.className.replace('show',''); },3200);
+  clearTimeout(el._t); el._t=setTimeout(function(){ el.className=el.className.replace('show',''); }, ms||3200);
+}
+
+/* Diagnostico: se abre tocando la version en el header.
+   Da los valores REALES del dispositivo (safe area, alto del header, modo) en vez de
+   tener que adivinarlos desde una captura. */
+function diag(){
+  var cs = getComputedStyle(document.documentElement);
+  var hd = document.querySelector('header').getBoundingClientRect();
+  var lg = document.querySelector('.h-mark').getBoundingClientRect();
+  var standalone = false;
+  try{
+    standalone = window.matchMedia('(display-mode:standalone)').matches ||
+                 window.navigator.standalone === true;
+  }catch(e){}
+  toast([
+    APP_VER + ' &middot; ' + (standalone ? 'pantalla de inicio' : 'navegador'),
+    'safe-top ' + (cs.getPropertyValue('--safe-top').trim() || '?') +
+      ' &middot; extra ' + (cs.getPropertyValue('--hdr-extra').trim() || '?'),
+    'header ' + Math.round(hd.height) + 'px &middot; logo en ' + Math.round(lg.top) + 'px',
+    'pantalla ' + window.innerWidth + 'x' + window.innerHeight
+  ].join('<br>'), '', 9000);
 }
 
 /* catalogo completo: rutina base + sugerencias + lo que Diego haya creado a mano */

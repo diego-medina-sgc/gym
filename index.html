@@ -246,6 +246,20 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
   letter-spacing:.09em;color:var(--dim);text-transform:uppercase}
 .xsep{display:none}
 .lastline{margin-top:9px;padding-left:42px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+/* salto de carga: el label va ARRIBA, no al costado. Con "Salto" a la izquierda
+   las cinco pills no entraban en 375 y la ultima quedaba cortada. */
+.pasoline{margin-top:7px;padding-left:42px}
+.pasobtn{font-family:'Asap Condensed',sans-serif;font-size:.71rem;font-weight:600;
+  letter-spacing:.05em;color:var(--dim);text-align:left;padding:7px 0;
+  border-bottom:1px dashed var(--border)}
+.pasobtn b{color:var(--muted);font-weight:700}
+.pasobtn:hover{color:var(--muted)}
+.pasolbl{display:block;font-family:'Asap Condensed',sans-serif;font-size:.62rem;
+  font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+  margin:4px 0 7px}
+.pasopills{display:flex;gap:5px}
+.pasopills .rirp{font-size:.79rem}
+@media(max-width:359px){ .pasopills .rirp{font-size:.71rem} }
 .meta{font-family:'Asap Condensed',sans-serif;font-size:.71rem;font-weight:600;letter-spacing:.05em;
   color:var(--dim);text-transform:uppercase}
 .meta b{color:var(--muted);font-weight:700}
@@ -714,6 +728,7 @@ var calRef = null;       // mes que muestra el calendario
 var openSession = null;  // clave de la tarjeta expandida en el historial
 var cardioDraft = null;  // corrida que se esta cargando/editando en el modal
 var openEx = null;       // ejercicio expandido en Entrenar (uno a la vez)
+var openPaso = null;     // ejercicio con el selector de salto de carga desplegado
 var newEx = {name:'', w:'', s:'3', r:'12'};  // form de "cargar a mano", fuera del DOM
 var draftDirty = false;  // hay cambios sin guardar en la sesion en curso
 
@@ -883,8 +898,10 @@ function setPaso(id, v){
     if(n > 0) localStorage.setItem('gym_paso_'+id, String(n));
     else localStorage.removeItem('gym_paso_'+id);
   }catch(e){}
+  openPaso = null;   /* elegiste: se cierra solo */
   buildTrain();
 }
+function togglePaso(id){ openPaso = (openPaso===id) ? null : id; buildTrain(); }
 function pasoDe(id){
   var fijo = pasoGuardado(id);
   if(fijo) return fijo;
@@ -1292,23 +1309,6 @@ function buildTrain(){
       h +=     '</div>';
       h +=   '</div>';
 
-      /* salto de carga: cuanto sube esta maquina por escalon */
-      var pfijo = pasoGuardado(id);
-      h +=   '<div class="rirbox">';
-      h +=     '<span class="rirlbl">Salto<span class="rirq" onclick="toast(\'Cuanto sube esta maquina por escalon. Con Auto lo deduce de tu historial.\')">?</span></span>';
-      h +=     '<div class="rirpills">';
-      h +=       '<button class="rirp'+(pfijo?'':' on')+'" onclick="setPaso(\''+id+'\',\'\')">auto</button>';
-      PASOS.forEach(function(v){
-        var on = pfijo && Math.abs(pfijo - parseFloat(v)) < 0.001;
-        h +=     '<button class="rirp'+(on?' on':'')+'" onclick="setPaso(\''+id+'\',\''+v+'\')">'+fKg(v)+'</button>';
-      });
-      h +=     '</div>';
-      h +=   '</div>';
-      if(!pfijo){
-        h += '<div class="hint" style="margin:-6px 0 12px;font-size:.75rem">Auto: <b>'+
-             fKg(pasoDe(id))+' kg</b> por escal&oacute;n, seg&uacute;n tu historial.</div>';
-      }
-
       /* timer de descanso: el HTML sale del estado real del timer, no al reves */
       h +=   restHTML(id);
 
@@ -1324,6 +1324,27 @@ function buildTrain(){
         h +=   '<span class="meta">Sin registro previo</span>';
       }
       h +=   '</div>';
+
+      /* Cuanto sube esta maquina por escalon. Solo tiene sentido si hay un peso
+         anterior que subir, asi que sin registro previo ni aparece. */
+      if(rec && nf(rec.weight)){
+        var pfijo = pasoGuardado(id);
+        h += '<div class="pasoline">';
+        if(openPaso === id){
+          h +=   '<span class="pasolbl">Sube de a</span>';
+          h +=   '<div class="pasopills">';
+          h +=     '<button class="rirp'+(pfijo?'':' on')+'" onclick="setPaso(\''+id+'\',\'\')">auto</button>';
+          PASOS.forEach(function(v){
+            var on = pfijo && Math.abs(pfijo - parseFloat(v)) < 0.001;
+            h +=   '<button class="rirp'+(on?' on':'')+'" onclick="setPaso(\''+id+'\',\''+v+'\')">'+fKg(v)+'</button>';
+          });
+          h +=   '</div>';
+        } else {
+          h +=   '<button class="pasobtn" onclick="togglePaso(\''+id+'\')">Sube de a <b>'+
+                 fKg(pasoDe(id))+' kg</b>'+(pfijo ? '' : ' &middot; auto')+'</button>';
+        }
+        h += '</div>';
+      }
       h += '</div>';
     }
     h += '</div>';
@@ -1367,6 +1388,7 @@ function buildTrain(){
    la lista mide varias pantallas y hay que scrollear mucho para encontrar el que toca. */
 function toggleOpen(id){
   openEx = (openEx===id) ? null : id;
+  openPaso = null;
   /* el descanso NO se corta al cambiar de ejercicio: sigue en segundo plano */
   buildTrain();
   if(openEx){

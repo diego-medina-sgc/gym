@@ -425,6 +425,47 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 .stbtn:hover:not(:disabled){background:var(--violet);color:#fff}
 .stbtn:disabled{opacity:.3;cursor:default}
 .stval{min-width:34px;text-align:center;font-size:1.3rem;font-weight:700}
+
+/* ---------- PROGRESO v12 ---------- */
+.hero{padding:16px}
+.hero-top{display:flex;align-items:center;gap:16px}
+.ring{width:76px;height:76px;flex:0 0 auto}
+.ring-t{font-family:'Asap',system-ui,sans-serif;font-size:19px;font-weight:700;
+  font-variant-numeric:tabular-nums}
+/* el keyframe arranca en la circunferencia entera (2*PI*30 = 188.5) y termina en
+   el dashoffset inline de cada anillo: sin fill-mode, el estado final es el del
+   atributo, asi que un solo keyframe sirve para cualquier porcentaje */
+@keyframes ringin{from{stroke-dashoffset:188.5}}
+.ring-f{animation:ringin .7s cubic-bezier(.22,1,.36,1)}
+.hero-b{flex:1;min-width:0}
+.hero-h{font-size:1.3rem;font-weight:700;letter-spacing:-.035em;line-height:1.15;margin-top:3px}
+.hero-m{font-family:'Asap Condensed',sans-serif;font-size:.79rem;font-weight:600;
+  letter-spacing:.05em;color:var(--muted);margin-top:4px}
+.hero-l{margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline);
+  font-size:.9rem;font-weight:600}
+.hero-f{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  margin-top:13px;padding-top:12px;border-top:1px solid var(--hairline)}
+.stepper.sm{padding:3px}
+.stepper.sm .stbtn{width:34px;height:34px;border-radius:8px;font-size:1rem}
+.stepper.sm .stval{min-width:26px;font-size:1.05rem}
+.pr-up{flex:0 0 auto;color:var(--green);font-size:.72rem;line-height:1}
+.prow{display:flex;align-items:center;gap:11px;padding:9px 0;border-bottom:1px solid var(--hairline)}
+.prow:last-child{border-bottom:none}
+.prow-n{flex:1;min-width:0;font-size:.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.spark{flex:0 0 auto;width:72px;height:24px}
+.prow-v{flex:0 0 auto;text-align:right;min-width:76px;line-height:1.3;
+  font-family:'Asap Condensed',sans-serif;font-size:.77rem;font-weight:700;
+  letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.prow-p{font-size:.73rem}
+.rec-v{font-size:2.4rem;font-weight:700;letter-spacing:-.045em;line-height:1;
+  color:var(--green-2);font-variant-numeric:tabular-nums;margin-top:5px}
+.rec-s{font-family:'Asap Condensed',sans-serif;font-size:.78rem;font-weight:600;
+  letter-spacing:.05em;color:var(--muted);margin-top:5px}
+@media(max-width:359px){
+  .spark{width:54px}
+  .prow-n{font-size:.82rem}
+  .prow-v{min-width:70px;font-size:.74rem}
+}
 /* --- corridas del dia, en Entrenar --- */
 .cardio-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
   background:var(--surface);border:1px solid rgba(59,224,208,.35);border-radius:var(--r);
@@ -581,7 +622,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v11';
+var APP_VER   = 'v12';
 
 /* ==================================================================
    EJERCICIOS
@@ -655,11 +696,6 @@ var GORDER = ['superior','medio','inferior'];
 /* Metricas del panel Progreso.
    'vol' es peso x series x reps: NO ve el trabajo de peso corporal.
    'series' y 'reps' si lo ven, por eso conviene mirar las tres. */
-var METRICAS = {
-  vol:    {lbl:'Volumen',      u:'kg'},
-  series: {lbl:'Series',       u:''},
-  reps:   {lbl:'Repeticiones', u:''}
-};
 
 var MACROS = {kcal:1850, prot:150, fat:55, carb:190};
 
@@ -693,10 +729,8 @@ function metaSemanal(){
 function setMeta(v){
   v = Math.max(1, Math.min(7, parseInt(v,10) || META_DEF));
   try{ localStorage.setItem('gym_meta', String(v)); }catch(e){}
-  buildHist();
+  buildProg();
 }
-var progBy = 'session';  // 'session' | 'week' | 'month'
-var progMetric = 'vol';  // 'vol' | 'series' | 'reps'
 var newGroup = 'superior';
 var charts = {};
 
@@ -815,12 +849,72 @@ function lastRecord(exId){
   }
   return null;
 }
-function suggest(rec){
+function suggest(rec, exId){
   if(!rec) return null;
   if(!rec.done) return {v:rec.weight, up:false};
-  var v = Math.round(rec.weight*1.05*2)/2;
-  if(v < rec.weight+0.5) v = rec.weight+0.5;
-  return {v:v, up:true};
+  return {v: subirPeso(exId, rec.weight), up:true};
+}
+
+/* ==================================================================
+   PASO DE CARGA
+   Las maquinas no suben de a un kilo. El remo salta de 13 a 16,5; el multipower
+   con discos chicos va de a 1,25; las mancuernas de a 1 o 2. Sugerir "+5%
+   redondeado a 0,5" daba pesos que no existen en el gimnasio (21 kg en la
+   sentadilla, 13,5 en el remo).
+
+   El paso sale del historial del ejercicio: el salto mas chico que Diego
+   realmente hizo alguna vez es, por definicion, un escalon de esa maquina.
+   Se puede fijar a mano, como el descanso, y vive en localStorage porque es
+   una propiedad del gimnasio, no del entrenamiento.
+   ================================================================== */
+var PASO_DEF = 2.5;
+var PASOS = ['1','1.25','2.5','5'];
+
+function pasoGuardado(id){
+  try{
+    var v = parseFloat(localStorage.getItem('gym_paso_'+id));
+    if(v > 0) return v;
+  }catch(e){}
+  return null;
+}
+function setPaso(id, v){
+  var n = parseFloat(v);
+  try{
+    if(n > 0) localStorage.setItem('gym_paso_'+id, String(n));
+    else localStorage.removeItem('gym_paso_'+id);
+  }catch(e){}
+  buildTrain();
+}
+function pasoDe(id){
+  var fijo = pasoGuardado(id);
+  if(fijo) return fijo;
+  var vals = [];
+  ((D && D.sessions) ? D.sessions : []).slice()
+    .sort(function(a,b){ return a.date<b.date?-1:1; })
+    .forEach(function(s){
+      var it = s.items[id];
+      if(it && it.done && nf(it.weight) > 0) vals.push(nf(it.weight));
+    });
+  var min = 0;
+  for(var i=1;i<vals.length;i++){
+    var d = Math.abs(vals[i] - vals[i-1]);
+    if(d > 0.01 && (!min || d < min)) min = d;
+  }
+  if(min) return Math.round(min*100)/100;
+  /* sin historial de saltos: por la carga. Menos de 12 kg suele ser mancuerna
+     o aislamiento, donde 2,5 kg de un saque es demasiado. */
+  var ult = vals.length ? vals[vals.length-1] : 0;
+  if(ult && ult < 12) return 1;
+  var e = exDef(id);
+  return (e && e.paso) || PASO_DEF;
+}
+/* siguiente peso que existe de verdad: uno o mas escalones, los que hagan falta
+   para llegar al +5%. Nunca devuelve un valor intermedio que no se puede cargar. */
+function subirPeso(id, w){
+  var p = pasoDe(id);
+  var n = Math.ceil((w*0.05) / p);
+  if(n < 1) n = 1;
+  return Math.round((w + n*p)*100)/100;
 }
 
 /* ==================================================================
@@ -866,12 +960,12 @@ function muscOf(id, it){
 
 /* Por cada musculo: series de la semana en curso, series por semana promedio,
    dias desde la ultima vez y total historico. */
-function muscleStats(){
+function muscleStats(wk){
   var out = {};
   MORDER.forEach(function(m){ out[m] = {sem:0, dias:null, ult:'', total:0, semanas:{}}; });
 
   var ss = (D && D.sessions) ? D.sessions : [];
-  var wkNow = weekKey(todayISO());
+  var wkNow = wk || weekKey(todayISO());
   var hoy = parseISO(todayISO());
 
   ss.forEach(function(s){
@@ -900,8 +994,8 @@ function muscleStats(){
 
 /* Ordena los musculos del mas descuidado al mas trabajado.
    Pesa lo que falta para el minimo semanal y los dias sin tocarlo. */
-function muscleGaps(){
-  var st = muscleStats();
+function muscleGaps(wk){
+  var st = muscleStats(wk);
   var arr = MORDER.map(function(m){
     var o = st[m];
     var falta = Math.max(0, SERIES_MIN - o.sem);
@@ -1133,7 +1227,7 @@ function buildTrain(){
     var st = draft[id];
     if(!st) return;
     var rec = lastRecord(id);
-    var sg  = suggest(rec);
+    var sg  = suggest(rec, id);
     var def = exDef(id);
     var yq  = def ? def.p : st.name;
 
@@ -1197,6 +1291,23 @@ function buildTrain(){
       });
       h +=     '</div>';
       h +=   '</div>';
+
+      /* salto de carga: cuanto sube esta maquina por escalon */
+      var pfijo = pasoGuardado(id);
+      h +=   '<div class="rirbox">';
+      h +=     '<span class="rirlbl">Salto<span class="rirq" onclick="toast(\'Cuanto sube esta maquina por escalon. Con Auto lo deduce de tu historial.\')">?</span></span>';
+      h +=     '<div class="rirpills">';
+      h +=       '<button class="rirp'+(pfijo?'':' on')+'" onclick="setPaso(\''+id+'\',\'\')">auto</button>';
+      PASOS.forEach(function(v){
+        var on = pfijo && Math.abs(pfijo - parseFloat(v)) < 0.001;
+        h +=     '<button class="rirp'+(on?' on':'')+'" onclick="setPaso(\''+id+'\',\''+v+'\')">'+fKg(v)+'</button>';
+      });
+      h +=     '</div>';
+      h +=   '</div>';
+      if(!pfijo){
+        h += '<div class="hint" style="margin:-6px 0 12px;font-size:.75rem">Auto: <b>'+
+             fKg(pasoDe(id))+' kg</b> por escal&oacute;n, seg&uacute;n tu historial.</div>';
+      }
 
       /* timer de descanso: el HTML sale del estado real del timer, no al reves */
       h +=   restHTML(id);
@@ -1577,7 +1688,7 @@ function addFromCat(id){
   openEx = id;
   var rec = lastRecord(id);
   if(rec){
-    var sg = suggest(rec);
+    var sg = suggest(rec, id);
     if(sg) draft[id].weight = String(sg.v);
     if(rec.series) draft[id].series = String(rec.series);
     if(rec.reps) draft[id].reps = String(rec.reps);
@@ -1832,36 +1943,8 @@ function buildHist(){
   h += '<div class="ptitle">Historial</div>';
   h += '<div class="psub">'+ss.length+' sesiones registradas</div>';
 
-  /* semana y racha */
-  var byWeek={};
-  ss.forEach(function(s){ var k=weekKey(s.date); (byWeek[k]=byWeek[k]||{})[s.date]=true; });
-  var meta = metaSemanal();
-  var thisWeek = byWeek[weekKey(todayISO())] ? Object.keys(byWeek[weekKey(todayISO())]).length : 0;
-  var streak=0, cur=monday(new Date());
-  for(var i=0;i<200;i++){
-    cur.setDate(cur.getDate()-7);
-    var n = byWeek[isoOf(cur)] ? Object.keys(byWeek[isoOf(cur)]).length : 0;
-    if(n>=meta) streak++; else break;
-  }
-
-  h += '<div class="kpis">';
-  h += kpi('Esta semana', thisWeek+'/'+meta,
-       thisWeek>=meta ? 'Semana cumplida' : 'Falta'+((meta-thisWeek)===1?' 1':'n '+(meta-thisWeek)),
-       thisWeek>=meta?'g':'');
-  h += kpi('Racha', streak+(streak===1?' semana':' semanas'), 'consecutivas con '+meta+'+', 'g');
-  h += kpi('Total', ss.length, 'sesiones', 'c');
-  h += '</div>';
-
-  /* objetivo editable */
-  h += '<div class="card metabox">';
-  h += '<div><div class="kick">Objetivo semanal</div>'+
-       '<div class="hint" style="margin-top:2px">Sesiones de gym por semana</div></div>';
-  h += '<div class="stepper">'+
-       '<button class="stbtn" onclick="setMeta('+(meta-1)+')"'+(meta<=1?' disabled':'')+'>&minus;</button>'+
-       '<span class="stval num">'+meta+'</span>'+
-       '<button class="stbtn" onclick="setMeta('+(meta+1)+')"'+(meta>=7?' disabled':'')+'>+</button>'+
-       '</div>';
-  h += '</div>';
+  /* La semana, la racha y el objetivo se fueron a Progreso: Historial es el log
+     (que hice) y Progreso el juicio (como voy). Estaban mezclados. */
 
   /* toggle vista */
   h += '<div style="display:flex;justify-content:center;margin-bottom:18px">';
@@ -2093,358 +2176,578 @@ function jumpTo(iso){
 }
 
 /* ---------------- PROGRESO ---------------- */
+/* ==================================================================
+   PROGRESO (v12) - reescrito entero
+   La pantalla vieja estaba organizada por METRICA: dos filas de toggles y nueve
+   maneras de mirar un total. Un total no responde ninguna de las dos preguntas
+   con las que Diego entra aca ("estoy mejorando", "que me falta"), y ademas
+   obligaba a interpretar. Esta esta organizada por PREGUNTA.
+
+   La decision de modelo que lo destraba todo: el progreso se mide POR EJERCICIO
+   contra si mismo, no sumando todo. Con peso, el record son los kg; sin peso
+   (abdominales, captain's chair), las reps por serie. Asi el peso corporal entra
+   al mismo sistema que el resto y desaparecen de una: el toggle de metrica y el
+   cartel que pedia disculpas porque el volumen en kg no lo veia.
+   ================================================================== */
+
+/* ---- semanas: la unidad de tiempo de toda la pantalla ----
+   Ni la sesion (ruidosa: tiene 4 o 10 ejercicios segun el dia) ni el mes
+   (demasiado lento con 5 semanas de historia). Ademas la meta y la referencia
+   de 10-20 series ya son semanales. */
+function semanas(){
+  var map = {}, keys = [];
+  function slot(k){
+    if(!map[k]){ map[k] = {key:k, fechas:{}, ses:0, series:0, vol:0, reps:0, km:0, corridas:0}; keys.push(k); }
+    return map[k];
+  }
+  ((D && D.sessions) ? D.sessions : []).forEach(function(s){
+    var o = slot(weekKey(s.date));
+    if(!o.fechas[s.date]){ o.fechas[s.date] = true; o.ses++; }
+    var st = statsOf([s]);
+    o.series += st.series; o.vol += st.vol; o.reps += st.reps;
+  });
+  cardioList().forEach(function(c){
+    var o = slot(weekKey(c.date));
+    o.km += nf(c.km); o.corridas++;
+  });
+  keys.sort();
+  return keys.map(function(k){ return map[k]; });
+}
+
+/* semanas anteriores consecutivas que llegaron a la meta (no cuenta la actual) */
+function racha(){
+  var meta = metaSemanal(), byWeek = {};
+  ((D && D.sessions) ? D.sessions : []).forEach(function(s){
+    var k = weekKey(s.date); (byWeek[k] = byWeek[k] || {})[s.date] = true;
+  });
+  var n = 0, cur = monday(new Date());
+  for(var i=0;i<200;i++){
+    cur.setDate(cur.getDate()-7);
+    var c = byWeek[isoOf(cur)] ? Object.keys(byWeek[isoOf(cur)]).length : 0;
+    if(c >= meta) n++; else break;
+  }
+  return n;
+}
+
+/* ==================================================================
+   RECORDS
+   ================================================================== */
+/* Valor con el que progresa un ejercicio. Con peso -> kg. Sin peso -> reps por
+   serie (no series x reps: agregar una serie es mas volumen, no mas fuerza). */
+function valorDe(it){
+  var w = nf(it.weight);
+  if(w > 0) return {v:w, u:'kg', peso:true};
+  var r = nf(it.reps);
+  return r > 0 ? {v:r, u:'reps', peso:false} : null;
+}
+function fVal(v, peso){
+  return peso ? fKg(v)+' kg' : Math.round(v)+' reps';
+}
+
+/* Maximo de un ejercicio en las sesiones ANTERIORES a una fecha. null si nunca. */
+function recordDe(exId, antesDe, modoPeso){
+  var max = null;
+  ((D && D.sessions) ? D.sessions : []).forEach(function(s){
+    if(antesDe && s.date >= antesDe) return;
+    var it = s.items[exId];
+    if(!it || !it.done) return;
+    var v = valorDe(it);
+    if(!v || v.peso !== modoPeso) return;
+    if(max === null || v.v > max) max = v.v;
+  });
+  return max;
+}
+
+/* Records rotos en una sesion. El debut no cuenta: la primera vez que hacer un
+   ejercicio no es romper un record, es estrenarlo. */
+function prsDe(s){
+  if(!s) return [];
+  var out = [];
+  (s.order && s.order.length ? s.order : Object.keys(s.items)).forEach(function(id){
+    var it = s.items[id];
+    if(!it || !it.done) return;
+    var v = valorDe(it);
+    if(!v) return;
+    var prev = recordDe(id, s.date, v.peso);
+    if(prev === null || v.v <= prev) return;
+    out.push({id:id, name:it.name, de:prev, a:v.v, u:v.u, peso:v.peso});
+  });
+  out.sort(function(a,b){ return (b.a/b.de) - (a.a/a.de); });
+  return out;
+}
+
+/* la sesion mas reciente que rompio algun record, y cuantas quedaron despues */
+function ultimoPR(){
+  var ss = (D && D.sessions) ? D.sessions : [];
+  for(var i=0;i<ss.length;i++){
+    var p = prsDe(ss[i]);
+    if(p.length) return {date:ss[i].date, prs:p, desde:i};
+  }
+  return null;
+}
+
+/* ==================================================================
+   PROGRESION POR EJERCICIO
+   ================================================================== */
+function progresionEx(){
+  var asc = ((D && D.sessions) ? D.sessions : []).slice()
+              .sort(function(a,b){ return a.date<b.date?-1:1; });
+  var map = {}, orden = [];
+  asc.forEach(function(s){
+    (s.order && s.order.length ? s.order : Object.keys(s.items)).forEach(function(id){
+      var it = s.items[id];
+      if(!it || !it.done) return;
+      var v = valorDe(it);
+      if(!v) return;
+      if(!map[id]){ map[id] = {id:id, name:it.name, peso:v.peso, vals:[], sr:''}; orden.push(id); }
+      var e = map[id];
+      if(v.peso !== e.peso) return;   /* no mezclo kg con reps */
+      e.vals.push(v.v);
+      e.sr = nf(it.series)+'x'+nf(it.reps);
+      e.ses = e.vals.length;
+    });
+  });
+  var out = orden.map(function(id){ return map[id]; });
+  out.forEach(function(e){
+    e.pri = e.vals[0];
+    e.ult = e.vals[e.vals.length-1];
+    e.pct = e.pri > 0 ? Math.round((e.ult - e.pri)/e.pri*100) : 0;
+  });
+  /* los de kg primero, y dentro de cada grupo del que mas mejoro al que menos:
+     la lista ordenada es en si misma un ranking de donde hay que empujar */
+  out.sort(function(a,b){
+    if(a.peso !== b.peso) return a.peso ? -1 : 1;
+    return b.pct - a.pct;
+  });
+  return out;
+}
+
+/* ==================================================================
+   SVG: anillo y sparkline. Sin dependencias, ~30 lineas cada uno.
+   ================================================================== */
+function anillo(hechas, meta){
+  var r = 30, c = 38, C = 2*Math.PI*r;
+  var pct = meta > 0 ? Math.min(1, hechas/meta) : 0;
+  var lleno = pct >= 1, gr = lleno ? 9 : 8;
+  var col = lleno ? 'var(--green)' : 'var(--violet)';
+  return '<svg class="ring" viewBox="0 0 76 76" aria-hidden="true">'+
+    '<circle cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="var(--surface3)" stroke-width="'+gr+'"/>'+
+    '<circle class="ring-f" cx="'+c+'" cy="'+c+'" r="'+r+'" fill="none" stroke="'+col+'" '+
+      'stroke-width="'+gr+'" stroke-linecap="round" stroke-dasharray="'+C.toFixed(1)+'" '+
+      'stroke-dashoffset="'+((1-pct)*C).toFixed(1)+'" transform="rotate(-90 '+c+' '+c+')"/>'+
+    '<text class="ring-t" x="'+c+'" y="'+c+'" text-anchor="middle" dy=".34em" fill="var(--text)">'+
+      hechas+'/'+meta+'</text></svg>';
+}
+
+/* Muestra la forma, no la escala: cada uno se normaliza a su propio min/max. */
+function sparkline(vals, col){
+  var w = 72, hh = 24, p = 3;
+  if(!vals || !vals.length) return '<svg class="spark" viewBox="0 0 '+w+' '+hh+'"></svg>';
+  if(vals.length === 1){
+    return '<svg class="spark" viewBox="0 0 '+w+' '+hh+'">'+
+           '<circle cx="'+(w-p-1)+'" cy="'+(hh/2)+'" r="2.5" fill="'+col+'"/></svg>';
+  }
+  var mn = Math.min.apply(null, vals), mx = Math.max.apply(null, vals);
+  var rango = mx - mn;
+  var pts = vals.map(function(v,i){
+    var x = p + (i/(vals.length-1))*(w-p*2);
+    var y = rango > 0 ? (hh-p) - ((v-mn)/rango)*(hh-p*2) : hh/2;
+    return x.toFixed(1)+','+y.toFixed(1);
+  });
+  var last = pts[pts.length-1].split(',');
+  return '<svg class="spark" viewBox="0 0 '+w+' '+hh+'" aria-hidden="true">'+
+    '<polyline points="'+pts.join(' ')+'" fill="none" stroke="'+col+'" stroke-width="1.8" '+
+      'stroke-linecap="round" stroke-linejoin="round"/>'+
+    '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="2.6" fill="'+col+'"/></svg>';
+}
+
+/* ==================================================================
+   RENDER
+   ================================================================== */
 function buildProg(){
   var ss = (D && D.sessions) ? D.sessions : [];
-  var h='';
+  var h = '';
   h += '<div class="ptitle">Progreso</div>';
-  h += '<div class="psub">Trabajo por tren</div>';
+  h += '<div class="psub">C&oacute;mo ven&iacute;s</div>';
 
   if(!ss.length){
     $('p-prog').innerHTML = h + '<div class="empty">Todav&iacute;a no hay sesiones para analizar.</div>';
     return;
   }
 
-  /* agrupacion */
-  h += '<div style="display:flex;justify-content:center;margin-bottom:9px">';
-  h += '<div class="pills">'+
-       '<button class="pill'+(progBy==='session'?' on':'')+'" onclick="setProgBy(\'session\')">Por sesi&oacute;n</button>'+
-       '<button class="pill'+(progBy==='week'?' on':'')+'" onclick="setProgBy(\'week\')">Por semana</button>'+
-       '<button class="pill'+(progBy==='month'?' on':'')+'" onclick="setProgBy(\'month\')">Por mes</button>'+
-       '</div></div>';
-
-  /* metrica */
-  h += '<div style="display:flex;justify-content:center;margin-bottom:18px">';
-  h += '<div class="pills">';
-  ['vol','series','reps'].forEach(function(m){
-    h += '<button class="pill'+(progMetric===m?' on':'')+'" onclick="setProgMetric(\''+m+'\')">'+METRICAS[m].lbl+'</button>';
-  });
-  h += '</div></div>';
-
-  var buckets = bucketize(ss, progBy);
-  var visibles = buckets.slice(-bucketCount(progBy));
-  var todas = [];
-  visibles.forEach(function(b){ todas = todas.concat(b.sessions); });
-  var st = statsOf(todas);
-
-  h += '<div class="kpis">';
-  h += kpi('Volumen', fInt(st.vol)+' kg', rangeLabel(progBy), progMetric==='vol'?'':'x');
-  h += kpi('Series', fInt(st.series), 'series efectivas', 'g');
-  h += kpi('Repeticiones', fInt(st.reps), 'reps totales', 'c');
-  h += kpi('Sesiones', st.ses, 'entrenamientos');
-  h += '</div>';
-
-  /* aviso: el volumen en kg no ve el peso corporal */
-  if(progMetric==='vol'){
-    var sinPeso = 0;
-    todas.forEach(function(s){
-      for(var id in s.items){ var it=s.items[id]; if(it.done && !(nf(it.weight)>0)) sinPeso++; }
-    });
-    if(sinPeso){
-      h += '<div class="card" style="display:flex;gap:10px;align-items:flex-start;background:var(--surface2)">'+
-           '<svg style="width:16px;height:16px;flex:0 0 auto;stroke:var(--cyan);stroke-width:2;fill:none;margin-top:2px" viewBox="0 0 24 24">'+
-           '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01" stroke-linecap="round"/></svg>'+
-           '<div class="hint">El volumen en kg <b>no cuenta los ejercicios de peso corporal</b> '+
-           '(abdominales, captain&#39;s chair). En este rango hay <b>'+sinPeso+'</b> de esos. '+
-           'Mir&aacute; <b>Series</b> o <b>Repeticiones</b> para ver ese trabajo.</div></div>';
-    }
-  }
-
-  /* ---- balance semanal por musculo ---- */
-  var mst = muscleStats();
-  var gaps = muscleGaps();
-  h += secHd('Balance de esta semana','green', 'series por m&uacute;sculo');
-  h += '<div class="card">';
-  h += '<div class="hint" style="margin-bottom:14px">La referencia para que un m&uacute;sculo crezca es '+
-       '<b>'+SERIES_MIN+' a '+SERIES_MAX+' series por semana</b>. La franja marcada es ese rango.</div>';
-  MORDER.forEach(function(m){
-    var o = mst[m];
-    var pct = Math.min(100, (o.sem / (SERIES_MAX*1.4)) * 100);
-    var z1 = (SERIES_MIN/(SERIES_MAX*1.4))*100, z2 = (SERIES_MAX/(SERIES_MAX*1.4))*100;
-    var cls = o.sem < SERIES_MIN ? 'mfill-bajo' : (o.sem <= SERIES_MAX ? 'mfill-ok' : 'mfill-alto');
-    var col = o.sem < SERIES_MIN ? 'var(--red)' : (o.sem <= SERIES_MAX ? 'var(--green-2)' : 'var(--cyan)');
-    h += '<div class="mrow">';
-    h += '<div class="mtop"><span class="mname2" style="color:'+col+'">'+MUSCULOS[m].lbl+'</span>'+
-         '<span class="mval">'+o.sem+' de '+SERIES_MIN+'&ndash;'+SERIES_MAX+'</span></div>';
-    h += '<div class="mbar"><div class="zona" style="left:'+z1.toFixed(1)+'%;right:'+(100-z2).toFixed(1)+'%"></div>'+
-         '<div class="fill '+cls+'" style="width:'+pct.toFixed(1)+'%"></div></div>';
-    h += '</div>';
-  });
-  var flojos = gaps.filter(function(x){ return x.falta > 0; });
-  if(flojos.length){
-    h += '<div class="hint" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--hairline)">'+
-         'Lo m&aacute;s atrasado: <b>'+flojos.slice(0,3).map(function(x){ return MUSCULOS[x.m].lbl; }).join(', ')+
-         '</b>. En <b>Entrenar &rarr; Agregar ejercicio</b> te los sugiere primero.</div>';
-  }
-  h += '</div>';
-
-  /* ---- dias sin trabajar cada musculo ---- */
-  h += secHd('Cu&aacute;ndo tocaste cada cosa','cyan','');
-  h += '<div class="card"><div class="chips">';
-  gaps.slice().sort(function(a,b){
-    var da = a.dias===null?9999:a.dias, db = b.dias===null?9999:b.dias;
-    return db - da;
-  }).forEach(function(x){
-    var viejo = (x.dias === null) || x.dias >= 7;
-    var txt = (x.dias === null) ? 'nunca' : (x.dias === 0 ? 'hoy' : (x.dias === 1 ? 'ayer' : 'hace '+x.dias+' d'));
-    h += '<span class="chip '+(viejo?'viejo':'ok')+'">'+MUSCULOS[x.m].lbl+' <b>'+txt+'</b></span>';
-  });
-  h += '</div></div>';
-
-  /* ---- ejercicios estancados ---- */
-  var est = estancados(4);
-  if(est.length){
-    h += secHd('Estancados','violet', est.length+(est.length===1?' ejercicio':' ejercicios'));
-    h += '<div class="card">';
-    h += '<div class="hint" style="margin-bottom:12px">Ven&iacute;s con el mismo peso hace varias sesiones. '+
-         'Si las complet&aacute;s sin drama, es momento de subir.</div>';
-    est.forEach(function(e){
-      var sug = Math.max(e.w+0.5, Math.round(e.w*1.05*2)/2);
-      h += '<div class="hex">'+
-           '<span class="hdot '+((exDef(e.id)||{}).g||'superior')+'"></span>'+
-           '<span class="hex-n">'+dispName(e.id, e.name)+'<br>'+
-           '<span class="hm">'+e.n+' sesiones en '+fKg(e.w)+' kg &middot; desde el '+fShort(e.desde)+'</span></span>'+
-           '<span class="hex-v" style="color:var(--green-2)">&#9650; '+fKg(sug)+' kg</span></div>';
-    });
-    h += '</div>';
-  }
-
-  h += secHd(METRICAS[progMetric].lbl+' por tren','violet', byLabel(progBy));
-  h += '<div class="card"><div class="chartbox"><canvas id="cv-vol"></canvas></div>';
-  h += '<div style="display:flex;gap:14px;justify-content:center;margin-top:12px;flex-wrap:wrap">';
-  GORDER.forEach(function(g){
-    h += '<span style="display:flex;align-items:center;gap:6px">'+
-         '<span style="width:9px;height:9px;border-radius:2px;background:'+GRUPOS[g].col+'"></span>'+
-         '<span class="kick" style="color:var(--muted)">'+GRUPOS[g].lbl+'</span></span>';
-  });
-  h += '</div>';
-  if(progBy!=='session' && visibles.length && isCurrentBucket(visibles[visibles.length-1].key, progBy)){
-    h += '<div style="text-align:center;margin-top:9px"><span class="kick" style="color:var(--dim)">'+
-         '* '+(progBy==='week'?'semana':'mes')+' en curso, todav&iacute;a suma</span></div>';
-  }
-  h += '</div>';
-
-  /* reparto total por tren, segun la metrica elegida */
-  h += secHd('Reparto del trabajo','green', METRICAS[progMetric].lbl.toLowerCase());
-  var totG = st.porGrupo;
-  var sum = totG.superior[progMetric]+totG.medio[progMetric]+totG.inferior[progMetric];
-  h += '<div class="card">';
-  GORDER.forEach(function(g){
-    var val = totG[g][progMetric];
-    var pct = sum>0 ? (val/sum*100) : 0;
-    h += '<div style="margin-bottom:13px">';
-    h += '<div style="display:flex;justify-content:space-between;margin-bottom:5px">'+
-         '<span class="kick" style="color:var(--text)">'+GRUPOS[g].lbl+'</span>'+
-         '<span class="kick num">'+fInt(val)+(METRICAS[progMetric].u?' '+METRICAS[progMetric].u:'')+
-         ' &middot; '+Math.round(pct)+'%</span></div>';
-    h += '<div style="height:8px;border-radius:5px;background:var(--surface3);overflow:hidden">'+
-         '<div style="height:100%;width:'+pct.toFixed(1)+'%;background:'+GRUPOS[g].col+';border-radius:5px"></div></div>';
-    h += '</div>';
-  });
-  h += '</div>';
-
-  /* por ejercicio */
-  h += secHd('Por ejercicio','cyan','hist&oacute;rico completo');
-  var porEx = {};
-  ss.forEach(function(s){
-    for(var id in s.items){
-      var it=s.items[id]; if(!it.done) continue;
-      if(!porEx[id]) porEx[id]={id:id, name:it.name, group:it.group||'superior', veces:0, vol:0, max:0, last:null, lastDate:''};
-      var e=porEx[id];
-      e.veces++;
-      e.vol += itemVol(it);
-      var w=nf(it.weight);
-      if(w>e.max) e.max=w;
-      if(e.last===null && it.weight!==''){ e.last=w; e.lastDate=s.date; }
-    }
-  });
-  var lista=[];
-  for(var k in porEx) lista.push(porEx[k]);
-  lista.sort(function(a,b){ return b.vol-a.vol; });
-
-  h += '<div class="tw"><table><thead><tr>'+
-       '<th>Ejercicio</th><th class="r">Veces</th><th class="r">&Uacute;ltimo</th><th class="r">M&aacute;ximo</th><th class="r">Volumen</th>'+
-       '</tr></thead><tbody>';
-  lista.forEach(function(e){
-    h += '<tr>'+
-         '<td><span class="hdot '+e.group+'" style="display:inline-block;margin-right:7px"></span>'+dispName(e.id,e.name)+'</td>'+
-         '<td class="r">'+e.veces+'</td>'+
-         '<td class="r">'+(e.last?fKg(e.last)+' kg':'&mdash;')+'</td>'+
-         '<td class="r">'+(e.max?fKg(e.max)+' kg':'&mdash;')+'</td>'+
-         '<td class="r">'+(e.vol?fInt(e.vol)+' kg':'&mdash;')+'</td>'+
-         '</tr>';
-  });
-  h += '</tbody></table></div>';
-
-  /* cardio */
-  var cl = cardioList();
-  if(cl.length){
-    var cs = cardioStats(cl);
-    var ritmoProm = cs.km>0 ? Math.round(cs.seg/cs.km) : 0;
-    h += secHd('Cardio','green', cl.length+(cl.length===1?' corrida':' corridas'));
-    h += '<div class="kpis">';
-    h += kpi('Distancia', fKm(cs.km)+' km', 'total acumulado', 'g');
-    h += kpi('Tiempo', fDur(cs.seg), 'corriendo', 'g');
-    h += kpi('Ritmo medio', ritmoProm?fRitmo(ritmoProm):'&mdash;', 'por kil&oacute;metro', 'c');
-    h += kpi('Calor&iacute;as', fInt(cs.kcal), 'quemadas', 'c');
-    h += '</div>';
-    h += '<div class="card"><div class="chartbox" style="height:200px"><canvas id="cv-cardio"></canvas></div>'+
-         '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
-         'kil&oacute;metros '+byLabel(progBy)+'</span></div></div>';
-  }
-
-  /* peso corporal, en segundo plano */
-  h += secHd('Peso corporal','violet','secundario');
-  var body = (D && D.body) ? D.body : [];
-  h += '<div class="card">';
-  if(body.length){
-    var last=body[0], first=body[body.length-1];
-    var dif=parseFloat(last.weight)-parseFloat(first.weight);
-    h += '<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:14px">'+
-         '<div><div class="kick">Actual</div><div style="font-size:1.4rem;font-weight:700" class="num">'+fKg(last.weight)+' kg</div></div>'+
-         '<div><div class="kick">Variaci&oacute;n</div><div style="font-size:1.4rem;font-weight:700" class="num">'+
-         (isNaN(dif)?'&mdash;':(dif>0?'+':'')+fKg(dif)+' kg')+'</div></div>'+
-         (last.waist?'<div><div class="kick">Cintura</div><div style="font-size:1.4rem;font-weight:700" class="num">'+fKg(last.waist)+' cm</div></div>':'')+
-         '</div>';
-    if(body.length>=2) h += '<div class="chartbox" style="height:170px"><canvas id="cv-body"></canvas></div>';
-  }
-  h += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">'+
-       '<div><div class="kick" style="margin-bottom:5px">Fecha</div><input type="date" id="b-date" value="'+todayISO()+'"></div>'+
-       '<div><div class="kick" style="margin-bottom:5px">Peso (kg)</div><input type="number" step="0.1" inputmode="decimal" id="b-w" placeholder="73"></div>'+
-       '</div>';
-  h += '<div style="margin:8px 0 12px"><div class="kick" style="margin-bottom:5px">Cintura (cm) &mdash; opcional</div>'+
-       '<input type="number" step="0.5" inputmode="decimal" id="b-waist" placeholder="&mdash;"></div>';
-  h += '<button class="btn btn-o btn-full" id="btn-body" onclick="saveBody()">Registrar medici&oacute;n</button>';
-  h += '</div>';
+  h += heroHTML();
+  h += recordsHTML();
+  h += progresionHTML();
+  h += semanasHTML();
+  h += balanceHTML();
+  h += estancadosHTML();
+  h += cardioProgHTML();
 
   $('p-prog').innerHTML = h;
   if(activeTab==='prog') drawProgCharts();
 }
 
-function setProgBy(v){ progBy=v; buildProg(); drawProgCharts(); }
-function setProgMetric(v){ progMetric=v; buildProg(); drawProgCharts(); }
+/* ---- 1. la semana en curso: lo primero, sin scrollear ni tocar nada ---- */
+function heroHTML(){
+  var meta = metaSemanal();
+  var all = semanas();
+  var wkNow = weekKey(todayISO());
+  var cur = null;
+  all.forEach(function(w){ if(w.key === wkNow) cur = w; });
 
-/* agrupa las sesiones por sesion, semana o mes. Siempre ascendente. */
-function bucketize(ss, by){
-  if(by==='session'){
-    return ss.slice()
-      .sort(function(a,b){ return a.date<b.date ? -1 : (a.date>b.date ? 1 : 0); })
-      .map(function(s){ return {key:s.date, sessions:[s]}; });
+  /* Si la semana en curso todavia esta en cero, muestro la pasada. Un anillo
+     vacio arriba de todo se lee como reproche, y el lunes no es el momento. */
+  var m = cur, rot = 'Esta semana', nueva = false;
+  if(!m || m.ses === 0){
+    var prev = null;
+    all.forEach(function(w){ if(w.key < wkNow && (!prev || w.key > prev.key)) prev = w; });
+    if(prev){ m = prev; rot = 'La semana pasada'; nueva = true; }
   }
-  var map={}, keys=[];
-  ss.forEach(function(s){
-    var k = (by==='week') ? weekKey(s.date) : monthKey(s.date);
-    if(!map[k]){ map[k]={key:k, sessions:[]}; keys.push(k); }
-    map[k].sessions.push(s);
+  if(!m) m = {key:wkNow, ses:0, series:0, vol:0, km:0};
+
+  var hecho = m.ses >= meta;
+
+  /* la linea que hace el trabajo emocional */
+  var otras = all.filter(function(w){ return w.key !== m.key; });
+  var ante = null;
+  otras.forEach(function(w){ if(w.key < m.key && (!ante || w.key > ante.key)) ante = w; });
+  var mejor = all.length > 1 && m.series > 0 &&
+              otras.every(function(w){ return m.series >= w.series; });
+
+  var linea = '', lcol = 'var(--muted)';
+  if(mejor){
+    linea = 'Tu mejor semana hasta ahora'; lcol = 'var(--green-2)';
+  } else if(ante && ante.series > 0 && m.series > 0){
+    var d = Math.round((m.series - ante.series)/ante.series*100);
+    if(d >= 10){ linea = '+'+d+'% de trabajo vs la semana anterior'; lcol = 'var(--green-2)'; }
+    else if(d <= -15){ linea = 'M&aacute;s tranquila que la anterior'; }
+    else { linea = 'Parecida a la semana anterior'; }
+  }
+
+  var det = [];
+  if(m.ses)    det.push(m.ses + (m.ses===1?' sesi&oacute;n':' sesiones'));
+  if(m.series) det.push(Math.round(m.series) + ' series');
+  if(m.km)     det.push(fKm(m.km) + ' km');
+  if(m.vol)    det.push(fInt(m.vol) + ' kg movidos');
+
+  var h = '<div class="card hero">';
+  h += '<div class="hero-top">' + anillo(m.ses, meta) + '<div class="hero-b">';
+  h += '<div class="kick">'+rot+'</div>';
+  h += '<div class="hero-h">'+(hecho ? 'Semana cumplida'
+        : (m.ses===0 ? 'Todav&iacute;a sin entrenar'
+        : 'Falta'+((meta-m.ses)===1?' 1':'n '+(meta-m.ses))))+'</div>';
+  if(det.length) h += '<div class="hero-m">'+det.join(' &middot; ')+'</div>';
+  h += '</div></div>';
+
+  if(linea) h += '<div class="hero-l" style="color:'+lcol+'">'+linea+'</div>';
+  if(nueva) h += '<div class="hero-l" style="color:var(--dim);font-weight:600">'+
+                 'Semana nueva &mdash; 0 de '+meta+'</div>';
+
+  var r = racha();
+  h += '<div class="hero-f">';
+  h += '<div class="hint">'+(r ? '<b style="color:var(--green-2)">'+r+
+       (r===1?' semana</b> seguida cumpliendo':' semanas</b> seguidas cumpliendo')
+       : 'Objetivo semanal')+'</div>';
+  h += '<div class="stepper sm">'+
+       '<button class="stbtn" onclick="setMeta('+(meta-1)+')"'+(meta<=1?' disabled':'')+'>&minus;</button>'+
+       '<span class="stval num">'+meta+'</span>'+
+       '<button class="stbtn" onclick="setMeta('+(meta+1)+')"'+(meta>=7?' disabled':'')+'>+</button>'+
+       '</div></div>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- 2. records: el recibo del esfuerzo ---- */
+function recordsHTML(){
+  var ss = (D && D.sessions) ? D.sessions : [];
+  var ult = ss[0];
+  var prs = prsDe(ult);
+  var h = '';
+
+  if(prs.length){
+    var prev = ss[1] ? prsDe(ss[1]).length : 0;
+    h += secHd('R&eacute;cords','green', 'sesi&oacute;n del '+fShort(ult.date));
+    h += '<div class="card">';
+    prs.forEach(function(p){
+      h += '<div class="hex">'+
+           '<span class="pr-up">&#9650;</span>'+
+           '<span class="hex-n">'+dispName(p.id, p.name)+'</span>'+
+           '<span class="hex-v" style="color:var(--green-2)">'+
+             fVal(p.de,p.peso)+' &rarr; '+fVal(p.a,p.peso)+'</span></div>';
+    });
+    h += '<div class="hint" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--hairline)">'+
+         '<b>'+prs.length+(prs.length===1?' r&eacute;cord':' r&eacute;cords')+'</b> el '+fShort(ult.date)+
+         (prev ? ' &middot; '+(prs.length+prev)+' en las &uacute;ltimas dos sesiones' : '')+'.</div>';
+    h += '</div>';
+    return h;
+  }
+
+  /* Sin records en la ultima sesion: en vez de un vacio, el ultimo conseguido.
+     Y si ya van 3 sesiones sin ninguno, engancho con los estancados de abajo. */
+  var u = ultimoPR();
+  h += secHd('R&eacute;cords','green','');
+  h += '<div class="card">';
+  if(u){
+    var p0 = u.prs[0];
+    h += '<div class="hex"><span class="pr-up">&#9650;</span>'+
+         '<span class="hex-n">'+dispName(p0.id, p0.name)+'<br>'+
+         '<span class="hm">&uacute;ltimo r&eacute;cord &middot; '+fShort(u.date)+'</span></span>'+
+         '<span class="hex-v" style="color:var(--green-2)">'+fVal(p0.a,p0.peso)+'</span></div>';
+    if(u.desde >= 3){
+      h += '<div class="hint" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--hairline)">'+
+           'Hace <b>'+u.desde+' sesiones</b> que no rompes un r&eacute;cord. '+
+           'Mir&aacute; los estancados m&aacute;s abajo: ah&iacute; est&aacute; el peso que te toca.</div>';
+    }
+  } else {
+    h += '<div class="hint">Todav&iacute;a no hay r&eacute;cords. En cuanto sub&iacute;s un peso o '+
+         'sum&aacute;s repeticiones sobre tu mejor marca, aparecen ac&aacute;.</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+/* ---- 3. progresion por ejercicio: reemplaza la tabla que scrolleaba de costado ---- */
+function progresionHTML(){
+  var lista = progresionEx();
+  if(!lista.length) return '';
+  var n = ((D && D.sessions) ? D.sessions : []).length;
+  var h = secHd('Progresi&oacute;n','violet', n+' sesiones');
+  h += '<div class="card">';
+  lista.forEach(function(e){
+    var sube = e.pct > 0;
+    var col = sube ? 'var(--green)' : 'var(--dim)';
+    h += '<div class="prow">';
+    h += '<span class="prow-n">'+dispName(e.id, e.name)+'</span>';
+    h += sparkline(e.vals, e.peso ? (sube?'#2BE08A':'#5E5E70') : '#3BE0D0');
+    h += '<span class="prow-v">';
+    if(e.peso){
+      h += fKg(e.pri)+' &rarr; '+fKg(e.ult)+' kg';
+      h += '<br><span class="prow-p" style="color:'+col+'">'+(sube?'+':'')+e.pct+'%</span>';
+    } else {
+      h += e.sr;
+      h += '<br><span class="prow-p" style="color:var(--muted)">'+e.ses+
+           (e.ses===1?' sesi&oacute;n':' sesiones')+'</span>';
+    }
+    h += '</span></div>';
   });
-  keys.sort();
-  return keys.map(function(k){ return map[k]; });
+  h += '</div>';
+  return h;
 }
-function bucketLabel(key, by){
-  if(by==='month'){
-    var p=key.split('-');
-    return MESES[(+p[1])-1]+' '+p[0].slice(2);
+
+/* ---- 4. el unico grafico: series por semana ---- */
+function semanasHTML(){
+  /* el asterisco solo se explica si hay una semana en curso en el grafico: un
+     lunes sin entrenar todavia, esa barra ni existe */
+  var wkNow = weekKey(todayISO());
+  var enCurso = semanas().some(function(w){ return w.ses > 0 && w.key === wkNow; });
+  var h = secHd('Trabajo por semana','cyan','series efectivas');
+  h += '<div class="card"><div class="chartbox" style="height:210px"><canvas id="cv-sem"></canvas></div>';
+  h += '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
+       'la l&iacute;nea es tu promedio'+(enCurso ? ' &middot; * semana en curso' : '')+
+       '</span></div></div>';
+  return h;
+}
+
+/* ---- 5. que te falta: solo lo que esta fuera de rango lleva barra ---- */
+function balanceHTML(){
+  /* Un lunes la semana en curso esta en cero y las ocho barras quedan iguales
+     en "0 de 10", que no dice nada. Como el hero, caigo a la semana pasada. */
+  var wk = weekKey(todayISO()), rot = 'semana en curso';
+  var hayEstaSemana = ((D && D.sessions) ? D.sessions : [])
+        .some(function(s){ return weekKey(s.date) === wk; });
+  if(!hayEstaSemana){
+    var prev = null;
+    semanas().forEach(function(w){ if(w.ses > 0 && w.key < wk && (!prev || w.key > prev)) prev = w.key; });
+    if(prev){ wk = prev; rot = 'semana pasada'; }
   }
-  var l = fShort(key);
-  return (by!=='session' && isCurrentBucket(key, by)) ? l+' *' : l;
+  var mst = muscleStats(wk);
+  var gaps = muscleGaps(wk);
+  var fuera = [], dentro = [], pasados = [];
+  MORDER.forEach(function(m){
+    var o = mst[m];
+    if(o.sem < SERIES_MIN) fuera.push(m);
+    else if(o.sem <= SERIES_MAX) dentro.push(m);
+    else pasados.push(m);
+  });
+  /* del mas urgente al menos: mismo criterio que usa el buscador de ejercicios */
+  var orden = gaps.map(function(x){ return x.m; }).filter(function(m){ return fuera.indexOf(m) >= 0; });
+
+  var h = secHd('Qu&eacute; te falta','red', rot);
+  h += '<div class="card">';
+  if(!orden.length && !dentro.length && !pasados.length){
+    h += '<div class="hint">Todav&iacute;a no entrenaste esta semana.</div></div>';
+    return h;
+  }
+  h += '<div class="hint" style="margin-bottom:14px">Para que un m&uacute;sculo crezca hacen falta '+
+       '<b>'+SERIES_MIN+' a '+SERIES_MAX+' series por semana</b>.</div>';
+  orden.forEach(function(m){
+    var o = mst[m];
+    var pct = Math.min(100, (o.sem/(SERIES_MAX*1.4))*100);
+    var z1 = (SERIES_MIN/(SERIES_MAX*1.4))*100, z2 = (SERIES_MAX/(SERIES_MAX*1.4))*100;
+    var dias = (o.dias === null) ? 'nunca'
+             : (o.dias === 0 ? 'hoy' : (o.dias === 1 ? 'ayer' : 'hace '+o.dias+' d&iacute;as'));
+    h += '<div class="mrow"><div class="mtop">'+
+         '<span class="mname2" style="color:var(--red)">'+MUSCULOS[m].lbl+'</span>'+
+         '<span class="mval">'+Math.round(o.sem)+' de '+SERIES_MIN+' &middot; '+dias+'</span></div>'+
+         '<div class="mbar"><div class="zona" style="left:'+z1.toFixed(1)+'%;right:'+(100-z2).toFixed(1)+'%"></div>'+
+         '<div class="fill mfill-bajo" style="width:'+pct.toFixed(1)+'%"></div></div></div>';
+  });
+  var pie = [];
+  if(dentro.length)  pie.push('<b style="color:var(--green-2)">En rango</b>: '+
+    dentro.map(function(m){ return MUSCULOS[m].lbl.toLowerCase()+' '+Math.round(mst[m].sem); }).join(', '));
+  if(pasados.length) pie.push('<b style="color:var(--cyan)">Pasados de '+SERIES_MAX+'</b>: '+
+    pasados.map(function(m){ return MUSCULOS[m].lbl.toLowerCase()+' '+Math.round(mst[m].sem); }).join(', '));
+  if(orden.length)   pie.push('En <b>Entrenar &rarr; Agregar ejercicio</b> te sugiere primero lo m&aacute;s atrasado.');
+  if(pie.length){
+    h += '<div class="hint" style="margin-top:14px;padding-top:12px;border-top:1px solid var(--hairline)">'+
+         pie.join('<br>')+'</div>';
+  }
+  h += '</div>';
+  return h;
 }
-/* la semana o el mes en curso todavia no terminaron: la barra esta a medio llenar */
-function isCurrentBucket(key, by){
-  if(by==='session') return false;
-  if(by==='month') return key === monthKey(todayISO());
-  return key === weekKey(todayISO());
+
+/* ---- 6. estancados: el bloque que ya funcionaba ---- */
+function estancadosHTML(){
+  var est = estancados(4);
+  if(!est.length) return '';
+  var h = secHd('Estancados','violet', est.length+(est.length===1?' ejercicio':' ejercicios'));
+  h += '<div class="card">';
+  h += '<div class="hint" style="margin-bottom:12px">Ven&iacute;s con el mismo peso hace varias sesiones. '+
+       'Si las complet&aacute;s sin drama, es momento de subir.</div>';
+  est.forEach(function(e){
+    var sug = subirPeso(e.id, e.w);
+    h += '<div class="hex">'+
+         '<span class="hdot '+((exDef(e.id)||{}).g||'superior')+'"></span>'+
+         '<span class="hex-n">'+dispName(e.id, e.name)+'<br>'+
+         '<span class="hm">'+e.n+' sesiones en '+fKg(e.w)+' kg &middot; desde el '+fShort(e.desde)+'</span></span>'+
+         '<span class="hex-v" style="color:var(--green-2)">&#9650; '+fKg(sug)+' kg</span></div>';
+  });
+  h += '</div>';
+  return h;
 }
-function bucketCount(by){ return by==='session' ? 10 : (by==='week' ? 8 : 6); }
-function byLabel(by){ return by==='session' ? 'por sesi&oacute;n' : (by==='week' ? 'por semana' : 'por mes'); }
-function rangeLabel(by){
-  return by==='session' ? '&uacute;ltimas 10 sesiones'
-       : (by==='week' ? '&uacute;ltimas 8 semanas' : '&uacute;ltimos 6 meses');
+
+/* ---- 7. cardio: el record es la distancia, no el ritmo ---- */
+/* Las corridas en orden, marcando las que fueron record al momento de correrlas. */
+function corridas(){
+  var l = cardioList().filter(function(c){
+    return (c.type||'Correr') === 'Correr' && nf(c.km) > 0;
+  });
+  l.sort(function(a,b){
+    var ka = a.date+'T'+(a.time||'00:00'), kb = b.date+'T'+(b.time||'00:00');
+    return ka<kb ? -1 : (ka>kb ? 1 : 0);
+  });
+  var max = 0;
+  return l.map(function(c){
+    var k = nf(c.km), pr = k > max;
+    if(pr) max = k;
+    return {c:c, km:k, pr:pr};
+  });
 }
+
+function cardioProgHTML(){
+  var cs = corridas();
+  if(!cs.length) return '';
+  var rec = cs[0];
+  cs.forEach(function(x){ if(x.km >= rec.km) rec = x; });
+  var otros = cardioList().length - cs.length;
+
+  var h = secHd('Cardio','green', cs.length+(cs.length===1?' corrida':' corridas')+
+          (otros>0 ? ' + '+otros+(otros===1?' caminata o bici':' caminatas o bici') : ''));
+  h += '<div class="card">';
+  h += '<div class="kick">Tu r&eacute;cord de distancia</div>';
+  h += '<div class="rec-v">'+fKm(rec.km)+' km</div>';
+  var rt = ritmoDe(rec.c.dur, rec.km);
+  h += '<div class="rec-s">'+fDate(rec.c.date)+
+       (nf(rec.c.dur) ? ' &middot; '+fDur(rec.c.dur) : '')+
+       (rt ? ' &middot; '+fRitmo(rt)+' /km' : '')+'</div>';
+  h += '<div class="chartbox" style="height:170px;margin-top:16px"><canvas id="cv-cardio"></canvas></div>';
+  h += '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
+       'distancia por corrida &middot; en verde, las que fueron r&eacute;cord</span></div>';
+  h += '</div>';
+  return h;
+}
+
+/* ==================================================================
+   GRAFICOS
+   ================================================================== */
+var TT = {
+  backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
+  titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10, displayColors:false
+};
 
 function drawProgCharts(){
   if(!window.Chart) return;
-  var ss = (D && D.sessions) ? D.sessions : [];
-  var cv = $('cv-vol');
+
+  /* series por semana: un color, sin apilar. En 320px de ancho tres segmentos
+     de color por barra eran una mancha, y la decision por tren ya la toma mejor
+     el balance por musculo. */
+  var cv = $('cv-sem');
   if(cv){
-    if(charts.vol){ charts.vol.destroy(); charts.vol=null; }
-    var buckets = bucketize(ss, progBy).slice(-bucketCount(progBy));
-    var labels = buckets.map(function(b){ return bucketLabel(b.key, progBy); });
-    var uni = METRICAS[progMetric].u;
-    var dss = GORDER.map(function(g){
-      return {
-        label: GRUPOS[g].lbl,
-        data: buckets.map(function(b){ return Math.round(statsOf(b.sessions).porGrupo[g][progMetric]); }),
-        backgroundColor: GRUPOS[g].col,
-        borderRadius: 4, borderSkipped: false
-      };
-    });
-    charts.vol = new Chart(cv.getContext('2d'), {
-      type:'bar',
-      data:{labels:labels, datasets:dss},
+    if(charts.sem){ charts.sem.destroy(); charts.sem=null; }
+    var ws = semanas().filter(function(w){ return w.ses > 0; }).slice(-8);
+    var wkNow = weekKey(todayISO());
+    var cerradas = ws.filter(function(w){ return w.key !== wkNow; });
+    var prom = cerradas.length
+      ? cerradas.reduce(function(a,w){ return a+w.series; },0)/cerradas.length : 0;
+    charts.sem = new Chart(cv.getContext('2d'), {
+      data:{
+        labels: ws.map(function(w){ return fShort(w.key) + (w.key===wkNow ? ' *' : ''); }),
+        datasets:[
+          {type:'bar', label:'series',
+           data: ws.map(function(w){ return Math.round(w.series); }),
+           backgroundColor: ws.map(function(w){ return w.key===wkNow ? '#9D85FF' : '#7C5CFF'; }),
+           borderRadius:5, borderSkipped:false, order:2},
+          {type:'line', label:'promedio',
+           data: ws.map(function(){ return Math.round(prom); }),
+           borderColor:'rgba(236,236,242,.3)', borderWidth:1.5, borderDash:[5,4],
+           pointRadius:0, fill:false, order:1}
+        ]
+      },
       options:{
         responsive:true, maintainAspectRatio:false,
-        plugins:{ legend:{display:false}, tooltip:{
-          backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
-          titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10,
+        plugins:{ legend:{display:false}, tooltip: Object.assign({}, TT, {
           callbacks:{ label:function(c){
-            return c.dataset.label+': '+c.parsed.y.toLocaleString('es-AR')+(uni?' '+uni:'');
-          } }
-        }},
+            return c.dataset.label==='promedio'
+              ? 'promedio: '+c.parsed.y+' series'
+              : c.parsed.y+' series';
+          } } }) },
         scales:{
-          x:{ stacked:true, grid:{display:false}, ticks:{color:'#5E5E70', font:{size:11}} },
-          y:{ stacked:true, grid:{color:'#22222E'}, ticks:{color:'#5E5E70', font:{size:11},
-              callback:function(v){ return v>=1000 ? (v/1000)+'k' : v; }} }
+          x:{ grid:{display:false}, ticks:{color:'#5E5E70', font:{size:11}} },
+          y:{ beginAtZero:true, grid:{color:'#22222E'}, ticks:{color:'#5E5E70', font:{size:11}} }
         }
       }
     });
   }
 
-  /* cardio: km por sesion, semana o mes */
+  /* cardio: una barra por corrida, las que fueron record en verde. La progresion
+     se lee de un vistazo sin leer un solo numero. */
   var cc = $('cv-cardio');
   if(cc){
     if(charts.cardio){ charts.cardio.destroy(); charts.cardio=null; }
-    var cl2 = cardioList();
-    var cmap={}, ckeys=[];
-    cl2.forEach(function(c){
-      var k = (progBy==='month') ? monthKey(c.date) : (progBy==='week' ? weekKey(c.date) : c.date);
-      if(!cmap[k]){ cmap[k]=0; ckeys.push(k); }
-      cmap[k] += nf(c.km);
-    });
-    ckeys.sort();
-    ckeys = ckeys.slice(-bucketCount(progBy));
+    var cs = corridas().slice(-14);
     charts.cardio = new Chart(cc.getContext('2d'), {
       type:'bar',
-      data:{ labels: ckeys.map(function(k){ return bucketLabel(k, progBy); }),
-             datasets:[{ data: ckeys.map(function(k){ return Math.round(cmap[k]*100)/100; }),
-               backgroundColor:'#2BE08A', borderRadius:4, borderSkipped:false }]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}, tooltip:{
-          backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
-          titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10, displayColors:false,
-          callbacks:{ label:function(c2){ return c2.parsed.y+' km'; } } }},
-        scales:{ x:{grid:{display:false}, ticks:{color:'#5E5E70', font:{size:10}}},
-                 y:{grid:{color:'#22222E'}, ticks:{color:'#5E5E70', font:{size:10},
-                     callback:function(v){ return v+' km'; }}} } }
-    });
-  }
-
-  var cb = $('cv-body');
-  if(cb){
-    if(charts.body){ charts.body.destroy(); charts.body=null; }
-    var body = (D && D.body ? D.body : []).slice().reverse();
-    charts.body = new Chart(cb.getContext('2d'), {
-      type:'line',
-      data:{ labels: body.map(function(b){ return fShort(b.date); }),
-             datasets:[{ data: body.map(function(b){ return parseFloat(b.weight); }),
-               borderColor:'#7C5CFF', backgroundColor:'rgba(124,92,255,.12)',
-               borderWidth:2.5, tension:.32, fill:true,
-               pointBackgroundColor:'#7C5CFF', pointBorderColor:'transparent', pointRadius:3 }]},
-      options:{ responsive:true, maintainAspectRatio:false,
-        plugins:{legend:{display:false}, tooltip:{
-          backgroundColor:'#24242F', borderColor:'#2A2A38', borderWidth:1,
-          titleColor:'#ECECF2', bodyColor:'#8A8A9C', padding:10, displayColors:false,
-          callbacks:{ label:function(c){ return c.parsed.y+' kg'; } } }},
-        scales:{ x:{grid:{display:false}, ticks:{color:'#5E5E70', font:{size:10}}},
-                 y:{grid:{color:'#22222E'}, ticks:{color:'#5E5E70', font:{size:10}}} } }
+      data:{
+        labels: cs.map(function(x){ return fShort(x.c.date); }),
+        datasets:[{
+          data: cs.map(function(x){ return Math.round(x.km*100)/100; }),
+          backgroundColor: cs.map(function(x){ return x.pr ? '#2BE08A' : '#3A3A4A'; }),
+          borderRadius:4, borderSkipped:false
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip: Object.assign({}, TT, {
+          callbacks:{ label:function(c){
+            var x = cs[c.dataIndex];
+            return fKm(x.km)+' km'+(x.pr ? ' - record' : '');
+          } } }) },
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:'#5E5E70', font:{size:10}, maxRotation:0} },
+          y:{ beginAtZero:true, grid:{color:'#22222E'},
+              ticks:{color:'#5E5E70', font:{size:10}, callback:function(v){ return v+' km'; }} }
+        }
+      }
     });
   }
 }

@@ -199,10 +199,20 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
   letter-spacing:.08em;text-transform:uppercase;transition:.15s;font-variant-numeric:tabular-nums}
 .restbtn svg{width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;
   stroke-linecap:round;stroke-linejoin:round}
-.restbtn.corriendo{border-style:solid;border-color:var(--cyan);color:var(--cyan);
-  background:var(--cyan-lt);font-size:1.05rem}
-.restbtn.listo{border-style:solid;border-color:var(--green);color:var(--green-2);
-  background:var(--green-lt)}
+/* timer activo: tiempo grande al medio, controles a los costados */
+.restrun{display:flex;align-items:center;gap:6px;padding:5px;border-radius:10px;
+  border:1px solid var(--cyan);background:var(--cyan-lt)}
+.restrun.pausa{border-color:var(--dim);background:var(--surface2)}
+.rest-t{flex:1;text-align:center;font-size:1.5rem;font-weight:700;color:var(--cyan);
+  font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.restrun.pausa .rest-t{color:var(--muted)}
+.rest-ic{width:40px;height:40px;border-radius:9px;background:var(--surface3);
+  display:flex;align-items:center;justify-content:center;color:var(--cyan);transition:.15s;flex:0 0 auto}
+.restrun.pausa .rest-ic{color:var(--muted)}
+.rest-ic svg{width:17px;height:17px;fill:currentColor}
+.rest-ic.ln svg{fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.rest-ic:hover{background:var(--surface)}
+.ex-res.tmr{color:var(--cyan)}
 .chk{flex:0 0 auto;width:32px;height:32px;border-radius:9px;border:2px solid var(--border);
   background:var(--surface2);display:flex;align-items:center;justify-content:center;transition:.15s;margin-top:1px}
 .chk svg{width:17px;height:17px;stroke:#0E0E14;stroke-width:3.4;fill:none;
@@ -415,6 +425,44 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 .stbtn:hover:not(:disabled){background:var(--violet);color:#fff}
 .stbtn:disabled{opacity:.3;cursor:default}
 .stval{min-width:34px;text-align:center;font-size:1.3rem;font-weight:700}
+/* --- corridas del dia, en Entrenar --- */
+.cardio-row{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:var(--surface);border:1px solid rgba(59,224,208,.35);border-radius:var(--r);
+  padding:11px 13px;margin-bottom:8px;transition:.15s}
+.cardio-row:hover{border-color:var(--cyan)}
+.cardio-ic{flex:0 0 auto;width:34px;height:34px;border-radius:10px;background:var(--cyan-lt);
+  display:flex;align-items:center;justify-content:center}
+.cardio-ic svg{width:18px;height:18px;stroke:var(--cyan);stroke-width:2;fill:none;
+  stroke-linecap:round;stroke-linejoin:round}
+.cardio-b{flex:1;min-width:0;display:block}
+.cardio-n{display:block;font-size:.9rem;font-weight:600}
+.cardio-d{display:block;font-family:'Asap Condensed',sans-serif;font-size:.74rem;font-weight:700;
+  letter-spacing:.06em;color:var(--cyan);margin-top:2px;font-variant-numeric:tabular-nums}
+
+/* --- rutinas guardadas --- */
+.rutbar{display:flex;align-items:center;gap:7px;margin:0 0 16px;overflow-x:auto;
+  scrollbar-width:none;padding-bottom:2px}
+.rutbar::-webkit-scrollbar{display:none}
+.rutchip{flex:0 0 auto;display:flex;align-items:center;gap:5px;min-height:34px;padding:7px 13px;
+  border-radius:20px;border:1px solid var(--border);background:var(--surface2);
+  font-family:'Asap Condensed',sans-serif;font-size:.76rem;font-weight:700;letter-spacing:.06em;
+  color:var(--text);white-space:nowrap;transition:.15s}
+.rutchip:hover{border-color:var(--violet);color:var(--violet-2)}
+.rutchip .st{color:var(--violet-2)}
+.rutchip.add{border-style:dashed;color:var(--muted)}
+.rutrow{display:flex;align-items:center;gap:9px;padding:10px 0;border-bottom:1px solid var(--hairline)}
+.rut-star{flex:0 0 auto;width:38px;height:38px;border-radius:9px;font-size:1.1rem;
+  color:var(--dim);background:var(--surface2);border:1px solid var(--border)}
+.rut-star.on{color:var(--violet-2);border-color:var(--violet);background:var(--violet-lt)}
+.rut-info{flex:1;min-width:0}
+.rut-n{font-size:.92rem;font-weight:600}
+.rut-c{font-family:'Asap Condensed',sans-serif;font-size:.71rem;font-weight:600;
+  letter-spacing:.07em;text-transform:uppercase;color:var(--dim);margin-top:1px}
+.rut-usar{flex:0 0 auto;min-height:38px;padding:8px 15px;border-radius:9px;
+  border:1px solid var(--border);background:var(--surface);color:var(--text);
+  font-family:'Asap Condensed',sans-serif;font-size:.75rem;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase}
+.rut-usar:hover{border-color:var(--violet);color:var(--violet-2)}
 .chips{display:flex;flex-wrap:wrap;gap:7px}
 .chip{display:flex;align-items:center;gap:6px;background:var(--surface2);border:1px solid var(--border);
   border-radius:20px;padding:6px 12px;font-family:'Asap Condensed',sans-serif;font-size:.74rem;
@@ -533,7 +581,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v10';
+var APP_VER   = 'v11';
 
 /* ==================================================================
    EJERCICIOS
@@ -914,6 +962,141 @@ function kpi(label,val,foot,cls){
          '<div class="kv">'+val+'</div><div class="kf">'+(foot||'')+'</div></div>';
 }
 
+/* ==================================================================
+   RUTINAS GUARDADAS (hasta 3)
+   Diego siempre sacaba los mismos ejercicios de la rutina base. En vez de borrarlos en
+   cada sesion, guarda su propio set. Viven en la planilla, no en localStorage: si borra
+   el cache de Safari no los pierde.
+   ================================================================== */
+var MAX_RUTINAS = 3;
+var rutSlot = 0, rutNombre = '';
+
+function rutinas(){ return (D && D.rutinas) ? D.rutinas : []; }
+function rutinaDefault(){
+  var rs = rutinas();
+  for(var i=0;i<rs.length;i++) if(rs[i].def) return rs[i];
+  return null;
+}
+/* el set de ejercicios que hay en pantalla, listo para guardar */
+function rutinaActual(){
+  return draftOrder.map(function(id){
+    var st = draft[id] || {};
+    return {id:id, s:String(st.series||''), r:String(st.reps||''),
+            n:st.name||'', g:st.group||'superior'};
+  });
+}
+/* carga una rutina en la sesion en curso, conservando lo que ya tenia cargado */
+function usarRutina(slot){
+  var r = null;
+  rutinas().forEach(function(x){ if(x.slot===slot) r = x; });
+  if(!r) return;
+  var previo = {};
+  draftOrder.forEach(function(id){ if(draft[id]) previo[id] = draft[id]; });
+
+  draft = {}; draftOrder = [];
+  (r.ex||[]).forEach(function(e){
+    var def = exDef(e.id);
+    draft[e.id] = previo[e.id] || {
+      name: e.n || (def ? def.p : e.id),
+      group: e.g || (def ? def.g : 'superior'),
+      weight:'', series:String(e.s||(def?def.s:3)), reps:String(e.r||(def?def.r:12)),
+      rir:'', done:false
+    };
+    draftOrder.push(e.id);
+  });
+  draftDirty = true;
+  openEx = null;
+  buildTrain();
+  toast('Rutina <b>'+esc(r.nombre)+'</b> cargada','ok');
+}
+
+function openRutinas(){
+  rutSlot = 0; rutNombre = '';
+  renderRutinas();
+  openModal();
+}
+
+function renderRutinas(){
+  var rs = rutinas();
+  var h = '';
+  h += '<div class="mttl"><h3>Mis rutinas</h3><button class="mx" onclick="closeModal()">&#10005;</button></div>';
+  h += '<div class="hint" style="margin-bottom:14px">Guard&aacute; hasta '+MAX_RUTINAS+' sets de ejercicios. '+
+       'La marcada con estrella es la que se carga sola en una sesi&oacute;n nueva.</div>';
+
+  if(rs.length){
+    rs.forEach(function(r){
+      h += '<div class="rutrow">';
+      h += '<button class="rut-star'+(r.def?' on':'')+'" onclick="marcarDefault('+r.slot+')">'+
+           (r.def?'&#9733;':'&#9734;')+'</button>';
+      h += '<div class="rut-info"><div class="rut-n">'+esc(r.nombre)+'</div>'+
+           '<div class="rut-c">'+(r.ex||[]).length+' ejercicios</div></div>';
+      h += '<button class="rut-usar" onclick="usarRutina('+r.slot+');closeModal()">Usar</button>';
+      h += '<button class="mx" onclick="borrarRutina('+r.slot+')">&#10005;</button>';
+      h += '</div>';
+    });
+  } else {
+    h += '<div class="empty" style="padding:18px">Todav&iacute;a no guardaste ninguna.</div>';
+  }
+
+  h += '<div class="mdiv"><span>guardar la de ahora</span></div>';
+  h += '<div class="hint" style="margin-bottom:10px">Se guardan los <b>'+draftOrder.length+
+       ' ejercicios</b> que ten&eacute;s en pantalla, con sus series y reps. Los pesos no.</div>';
+  h += '<div style="margin-bottom:12px"><div class="fl kick" style="margin-bottom:5px">Nombre</div>'+
+       '<input type="text" id="rut-nombre" placeholder="Ej: Mi rutina" value="'+esc(rutNombre)+'" '+
+       'oninput="rutNombre=this.value"></div>';
+  h += '<div class="fl kick" style="margin-bottom:6px">Guardar en</div><div class="grow">';
+  for(var i=1;i<=MAX_RUTINAS;i++){
+    var ocupada = null;
+    rs.forEach(function(x){ if(x.slot===i) ocupada = x; });
+    h += '<button class="gbtn rut-slot'+(rutSlot===i?' on':'')+'" data-s="'+i+'" onclick="setRutSlot('+i+')">'+
+         (ocupada ? esc(ocupada.nombre).slice(0,10) : 'Libre '+i)+'</button>';
+  }
+  h += '</div>';
+  h += '<button class="btn btn-p btn-full" id="btn-rut" onclick="guardarRutina()">Guardar rutina</button>';
+
+  $('modal-box').innerHTML = h;
+}
+function setRutSlot(i){
+  rutSlot = i;
+  var bs = document.querySelectorAll('#modal-box .rut-slot');
+  for(var k=0;k<bs.length;k++) bs[k].classList.toggle('on', +bs[k].dataset.s === i);
+}
+
+function guardarRutina(){
+  var nombre = (rutNombre||'').trim();
+  if(!nombre){ toast('Pon&eacute;le un nombre','err'); return; }
+  if(!rutSlot){ toast('Eleg&iacute; d&oacute;nde guardarla','err'); return; }
+  if(!draftOrder.length){ toast('No hay ejercicios para guardar','err'); return; }
+
+  var rs = rutinas().filter(function(r){ return r.slot !== rutSlot; });
+  var hayDef = false;
+  rs.forEach(function(r){ if(r.def) hayDef = true; });
+  rs.push({slot:rutSlot, nombre:nombre, ex:rutinaActual(), def: !hayDef});
+  rs.sort(function(a,b){ return a.slot-b.slot; });
+
+  apiPost('saveRutinas', {rutinas:rs}, $('btn-rut'))
+    .then(function(){ closeModal(); toast('Rutina guardada','ok'); fetchData(true); })
+    .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
+}
+function marcarDefault(slot){
+  var rs = rutinas().map(function(r){
+    return {slot:r.slot, nombre:r.nombre, ex:r.ex, def: r.slot===slot};
+  });
+  apiPost('saveRutinas', {rutinas:rs})
+    .then(function(){ if(D) D.rutinas = rs; renderRutinas(); buildTrain(); fetchData(true); })
+    .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
+}
+function borrarRutina(slot){
+  var r = null;
+  rutinas().forEach(function(x){ if(x.slot===slot) r = x; });
+  if(!r) return;
+  if(!window.confirm('Borrar la rutina "'+r.nombre+'"?')) return;
+  var rs = rutinas().filter(function(x){ return x.slot !== slot; });
+  apiPost('saveRutinas', {rutinas:rs})
+    .then(function(){ if(D) D.rutinas = rs; renderRutinas(); buildTrain(); toast('Rutina borrada','ok'); fetchData(true); })
+    .catch(function(e){ toast('No pude borrar: '+e.message,'err'); });
+}
+
 /* ---------------- ENTRENAR ---------------- */
 function buildTrain(){
   var h='';
@@ -927,6 +1110,18 @@ function buildTrain(){
        '<input type="date" id="in-date" value="'+curDate+'" onchange="pickDate(this.value)">'+
        (curDate!==todayISO()?'<button class="sug same" onclick="pickDate(\''+todayISO()+'\')">Volver a hoy</button>':'')+
        '</div>';
+
+  /* rutinas guardadas */
+  var rsv = rutinas();
+  h += '<div class="rutbar">';
+  h += '<span class="kick" style="flex:0 0 auto">Rutinas</span>';
+  rsv.forEach(function(r){
+    h += '<button class="rutchip" onclick="usarRutina('+r.slot+')">'+
+         (r.def?'<span class="st">&#9733;</span>':'')+esc(r.nombre)+'</button>';
+  });
+  h += '<button class="rutchip add" onclick="openRutinas()">'+
+       (rsv.length ? '&#9881; Editar' : '+ Guardar esta')+'</button>';
+  h += '</div>';
 
   h += secHd('Ejercicios','violet', doneN+' de '+draftOrder.length+' hechos');
 
@@ -955,10 +1150,15 @@ function buildTrain(){
     if(nf(st.weight)) res.push(fKg(st.weight)+' kg');
     if(st.series && st.reps) res.push(esc(st.series)+'x'+esc(st.reps));
     if(st.rir !== '' && st.rir !== undefined) res.push('RIR '+esc(st.rir));
+    /* si hay descanso corriendo para este ejercicio, se ve aunque este cerrado */
+    var conTimer = (restTimer && restTimer.id === id);
 
     h +=     '<button class="ex-ttl" onclick="toggleOpen(\''+id+'\')">'+
              dispName(id, st.name)+
-             (res.length ? '<span class="ex-res">'+res.join(' &middot; ')+'</span>' : '')+
+             (conTimer
+                ? '<span class="ex-res tmr">&#9201; <span id="res-t-'+id+'">'+fDur(restFalta())+'</span>'+
+                  (res.length ? ' &middot; '+res.join(' &middot; ') : '')+'</span>'
+                : (res.length ? '<span class="ex-res">'+res.join(' &middot; ')+'</span>' : ''))+
              '</button>';
     h +=     '<button class="ex-chev" onclick="toggleOpen(\''+id+'\')">'+
              '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>';
@@ -998,13 +1198,8 @@ function buildTrain(){
       h +=     '</div>';
       h +=   '</div>';
 
-      /* timer de descanso */
-      var seg = restDe(id);
-      h +=   '<div class="restbox">';
-      h +=     '<button class="restbtn" id="rest-btn-'+id+'" onclick="iniciarDescanso(\''+id+'\','+seg+')">'+
-               '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>'+
-               '<span id="rest-'+id+'">Descansar '+fDur(seg)+'</span></button>';
-      h +=   '</div>';
+      /* timer de descanso: el HTML sale del estado real del timer, no al reves */
+      h +=   restHTML(id);
 
       h +=   '<div class="lastline">';
       if(rec){
@@ -1026,6 +1221,23 @@ function buildTrain(){
   h += '<button class="btn btn-dash" onclick="openAdd()" style="margin-top:4px">'+
        '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar ejercicio</button>';
 
+  /* el cardio se registra aca, junto al gym: Entrenar es donde se carga,
+     Historial es donde se consulta. La corrida guardada aparece igual en Historial. */
+  h += secHd('Cardio','cyan','Correr, andar o bici');
+  var cHoy = cardioList().filter(function(c){ return c.date === curDate; });
+  cHoy.forEach(function(c){
+    var r = nf(c.ritmo) || ritmoDe(c.dur, c.km);
+    h += '<button class="cardio-row" onclick="openCardio(\''+jsq(c.id)+'\')">'+
+         '<span class="cardio-ic"><svg viewBox="0 0 24 24"><path d="M13 4a1 1 0 1 0 0-.001M8 21l2-5 3-2 1-4 3 3 3 1M6 12l2-4 4-1"/></svg></span>'+
+         '<span class="cardio-b"><span class="cardio-n">'+esc(c.type)+(c.time?' &middot; '+esc(c.time):'')+'</span>'+
+         '<span class="cardio-d">'+(nf(c.km)?fKg(c.km)+' km &middot; ':'')+fDur(c.dur)+
+         (r?' &middot; '+fRitmo(r)+'/km':'')+'</span></span>'+
+         '<svg class="hchev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>';
+  });
+  h += '<button class="btn btn-dash" onclick="openCardio()">'+
+       '<svg viewBox="0 0 24 24"><path d="M13 4a1 1 0 1 0 0-.001M8 21l2-5 3-2 1-4 3 3 3 1M6 12l2-4 4-1"/></svg>'+
+       (cHoy.length ? 'Registrar otra corrida' : 'Registrar corrida')+'</button>';
+
   h += secHd('Notas','violet','Opcional');
   h += '<textarea id="in-notes" rows="3" placeholder="C&oacute;mo te sentiste, qu&eacute; m&aacute;quina usaste, molestias..." '+
        'oninput="notesDraft=this.value">'+esc(notesDraft)+'</textarea>';
@@ -1044,7 +1256,7 @@ function buildTrain(){
    la lista mide varias pantallas y hay que scrollear mucho para encontrar el que toca. */
 function toggleOpen(id){
   openEx = (openEx===id) ? null : id;
-  pararDescanso();
+  /* el descanso NO se corta al cambiar de ejercicio: sigue en segundo plano */
   buildTrain();
   if(openEx){
     setTimeout(function(){
@@ -1071,50 +1283,97 @@ function restDe(id){
 }
 
 /* ---- timer de descanso ----
-   Se cuenta contra un timestamp, no sumando ticks: en iOS el setInterval se frena
-   cuando la pantalla se bloquea, y el descanso quedaria corriendo mal. */
+   Cuenta contra un timestamp, no sumando ticks: en iOS el setInterval se frena cuando
+   la pantalla se bloquea y el descanso quedaria corriendo mal.
+
+   El timer vive en `restTimer` y NO depende del DOM: el render lo consulta con restHTML().
+   Antes toggleOpen() lo mataba, asi que tocar cualquier otro ejercicio cancelaba el
+   descanso sin aviso; y cada buildTrain() recreaba el nodo mostrando el texto inicial. */
 var restTimer = null, audioCtx = null;
+/* restTimer = {id, hasta, restante, total, tick}   restante != null => esta pausado */
+
 function iniciarDescanso(id, seg){
   pararDescanso();
   try{
     var AC = window.AudioContext || window.webkitAudioContext;
     if(AC && !audioCtx) audioCtx = new AC();   /* crear en el gesto: iOS no deja despues */
   }catch(e){}
-  restTimer = { id:id, hasta: Date.now() + seg*1000 };
+  restTimer = { id:id, hasta: Date.now() + seg*1000, restante:null, total:seg };
   restTimer.tick = setInterval(pintarDescanso, 250);
-  pintarDescanso();
+  buildTrain();
 }
-function pararDescanso(termino){
+function pausarDescanso(){
+  if(!restTimer || restTimer.restante !== null) return;
+  restTimer.restante = restFalta();
+  if(restTimer.tick) clearInterval(restTimer.tick);
+  restTimer.tick = null;
+  buildTrain();
+}
+function reanudarDescanso(){
+  if(!restTimer || restTimer.restante === null) return;
+  restTimer.hasta = Date.now() + restTimer.restante*1000;
+  restTimer.restante = null;
+  restTimer.tick = setInterval(pintarDescanso, 250);
+  buildTrain();
+}
+function reiniciarDescanso(){
+  if(!restTimer) return;
+  iniciarDescanso(restTimer.id, restTimer.total || restDe(restTimer.id));
+}
+function pararDescanso(){
   if(restTimer && restTimer.tick) clearInterval(restTimer.tick);
-  if(restTimer && !termino){
-    var b = $('rest-btn-'+restTimer.id);
-    if(b) b.classList.remove('corriendo');
-    var el = $('rest-'+restTimer.id);
-    if(el) el.innerHTML = 'Descansar '+fDur(restDe(restTimer.id));
-  }
   restTimer = null;
 }
+function cerrarDescanso(){ pararDescanso(); buildTrain(); }
+
+/* segundos que faltan, este corriendo o pausado */
+function restFalta(){
+  if(!restTimer) return 0;
+  if(restTimer.restante !== null) return restTimer.restante;
+  return Math.max(0, Math.round((restTimer.hasta - Date.now())/1000));
+}
+
 function pintarDescanso(){
   if(!restTimer) return;
-  var falta = Math.round((restTimer.hasta - Date.now())/1000);
-  var el = $('rest-'+restTimer.id), b = $('rest-btn-'+restTimer.id);
-  if(!el){ pararDescanso(); return; }          /* se cerro el ejercicio */
-  if(falta > 0){
-    el.textContent = fDur(falta);
-    if(b) b.classList.add('corriendo');
-    return;
-  }
-  el.innerHTML = 'Listo &middot; a la siguiente';
-  if(b){ b.classList.remove('corriendo'); b.classList.add('listo'); }
+  var falta = restFalta();
+  /* si el ejercicio esta cerrado el nodo no existe, pero el timer sigue corriendo igual */
+  var el = $('rest-t-'+restTimer.id);
+  if(el) el.textContent = fDur(falta);
+  var res = $('res-t-'+restTimer.id);
+  if(res) res.textContent = fDur(falta);
+  if(falta > 0) return;
+  pararDescanso();
   beep();
-  var idFin = restTimer.id;
-  pararDescanso(true);
-  setTimeout(function(){
-    var e2=$('rest-'+idFin), b2=$('rest-btn-'+idFin);
-    if(e2) e2.innerHTML = 'Descansar '+fDur(restDe(idFin));
-    if(b2) b2.classList.remove('listo');
-  }, 6000);
+  buildTrain();
+  toast('Descanso terminado &middot; a la siguiente serie','ok');
 }
+/* El bloque de descanso se arma segun el estado del timer: sin timer es el boton para
+   arrancarlo; con timer son los controles de pausa, reinicio y cancelar. */
+function restHTML(id){
+  var activo = (restTimer && restTimer.id === id);
+  if(!activo){
+    var seg = restDe(id);
+    return '<div class="restbox">'+
+      '<button class="restbtn" onclick="iniciarDescanso(\''+id+'\','+seg+')">'+
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M9 2h6"/></svg>'+
+      '<span>Descansar '+fDur(seg)+'</span></button></div>';
+  }
+  var pausado = restTimer.restante !== null;
+  var h = '<div class="restbox"><div class="restrun'+(pausado?' pausa':'')+'">';
+  h += '<button class="rest-ic" onclick="'+(pausado?'reanudarDescanso()':'pausarDescanso()')+'">';
+  h += pausado
+     ? '<svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>'
+     : '<svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16" rx="1.2"/><rect x="14" y="4" width="4" height="16" rx="1.2"/></svg>';
+  h += '</button>';
+  h += '<span class="rest-t" id="rest-t-'+id+'">'+fDur(restFalta())+'</span>';
+  h += '<button class="rest-ic ln" onclick="reiniciarDescanso()">'+
+       '<svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></button>';
+  h += '<button class="rest-ic ln" onclick="cerrarDescanso()">'+
+       '<svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+  h += '</div></div>';
+  return h;
+}
+
 function beep(){
   try{
     if(!audioCtx) return;
@@ -1164,10 +1423,22 @@ function loadDraft(){
     });
     notesDraft = s.notes||'';
   } else {
-    RUTINA_BASE.forEach(function(e){
-      draft[e.id]={name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
-      draftOrder.push(e.id);
-    });
+    /* si hay una rutina propia marcada de arranque, se usa esa en vez de RUTINA_BASE */
+    var rd = rutinaDefault();
+    if(rd && rd.ex && rd.ex.length){
+      rd.ex.forEach(function(e){
+        var def = exDef(e.id);
+        draft[e.id]={name:e.n||(def?def.p:e.id), group:e.g||(def?def.g:'superior'),
+                     weight:'', series:String(e.s||(def?def.s:3)), reps:String(e.r||(def?def.r:12)),
+                     rir:'', done:false};
+        draftOrder.push(e.id);
+      });
+    } else {
+      RUTINA_BASE.forEach(function(e){
+        draft[e.id]={name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
+        draftOrder.push(e.id);
+      });
+    }
   }
 }
 
@@ -1598,10 +1869,6 @@ function buildHist(){
        '<button class="pill'+(histView==='lista'?' on':'')+'" onclick="setHistView(\'lista\')">Lista</button>'+
        '<button class="pill'+(histView==='cal'?' on':'')+'" onclick="setHistView(\'cal\')">Calendario</button>'+
        '</div></div>';
-
-  h += '<button class="btn btn-dash" style="margin-bottom:16px" onclick="openCardio()">'+
-       '<svg viewBox="0 0 24 24"><path d="M13 4a1 1 0 1 0 0-.001M8 21l2-5 3-2 1-4 3 3 3 1M6 12l2-4 4-1"/></svg>'+
-       'Registrar corrida</button>';
 
   h += (histView==='cal') ? calendarHTML(ss) : listHTML(ss);
 

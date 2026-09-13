@@ -175,6 +175,31 @@ input[type=time]::-webkit-inner-spin-button{display:none;-webkit-appearance:none
   stroke-linecap:round;stroke-linejoin:round;transition:.2s}
 .ex.open .ex-chev svg{transform:rotate(180deg);stroke:var(--violet-2)}
 .ex.open{border-color:var(--violet)}
+/* ---------- ordenar arrastrando (v13) ----------
+   touch-action:none SOLO en el agarre: el resto de la tarjeta sigue scrolleando */
+.grip{flex:0 0 auto;width:28px;height:36px;margin-right:-8px;display:flex;align-items:center;
+  justify-content:center;touch-action:none;cursor:grab;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.grip svg{width:10px;height:16px;fill:var(--dim)}
+.grip:active svg{fill:var(--violet-2)}
+.dragging{position:relative;z-index:60;transition:none!important;cursor:grabbing;
+  border-color:var(--violet)!important;box-shadow:0 14px 34px rgba(0,0,0,.6)}
+body.arrastrando{-webkit-user-select:none;user-select:none}
+.ordbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
+  margin:-4px 0 12px;padding:9px 12px;border:1px dashed var(--violet);border-radius:var(--r);
+  background:var(--violet-lt)}
+.ordbar span{font-size:.84rem;font-weight:600;color:var(--violet-2)}
+.rut-info{text-align:left;padding:4px 0}
+.rut-info .rut-n,.rut-info .rut-c{display:block}
+.rutedit{padding:0 0 14px;border-bottom:1px solid var(--hairline)}
+#rutlist{margin-bottom:12px}
+.rutex{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 12px;margin-bottom:6px;
+  background:var(--surface2);border:1px solid var(--border);border-radius:10px}
+.rutex-n{flex:1;min-width:0;font-size:.86rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rutex-s{flex:0 0 auto;font-family:'Asap Condensed',sans-serif;font-size:.72rem;font-weight:700;
+  letter-spacing:.05em;color:var(--muted)}
+.musc-grow{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.musc-grow .gbtn{min-width:0;padding-left:2px;padding-right:2px}
 .ex.done.open{border-color:rgba(43,224,138,.5)}
 .ex-det{padding-top:4px;margin-top:8px;border-top:1px solid var(--hairline)}
 .ex-sub{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0 4px}
@@ -636,7 +661,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v12';
+var APP_VER   = 'v13';
 
 /* ==================================================================
    EJERCICIOS
@@ -842,9 +867,76 @@ function allKnown(){
   return out;
 }
 function exDef(id){ return allKnown()[id] || null; }
+
+/* ==================================================================
+   NOMBRES (v13)
+   Los ejercicios se reconocen por su ID, nunca por el nombre: renombrar no toca
+   el historial ni los records. El nombre que manda es, en este orden:
+   1. el que Diego acaba de poner en este celular (localStorage, hasta que guarde)
+   2. el ultimo guardado en la planilla (ese viaja entre dispositivos)
+   3. el del catalogo
+   ================================================================== */
+function nombresLocal(){
+  try{ return JSON.parse(localStorage.getItem('gym_nombres') || '{}') || {}; }catch(e){ return {}; }
+}
+function nombreGuardado(id){
+  var ss = (D && D.sessions) ? D.sessions : [];
+  for(var i=0;i<ss.length;i++){
+    var it = ss[i].items[id];
+    if(it && it.name) return String(it.name);
+  }
+  return '';
+}
+/* nombre plano, sin entidades: el que va a la planilla y a la busqueda de YouTube */
+function nombrePlano(id, fallback){
+  var loc = nombresLocal()[id];
+  if(loc) return loc;
+  var g = nombreGuardado(id);
+  if(g) return g;
+  var e = exDef(id);
+  return e ? e.p : (fallback || id);
+}
 function dispName(id, fallback){
   var e = exDef(id);
+  var loc = nombresLocal()[id];
+  if(loc) return (e && !e.custom && loc === e.p) ? e.n : esc(loc);
+  if(e && !e.custom){
+    /* el catalogo tiene la version con acentos; si el guardado es el mismo, uso esa */
+    var g = nombreGuardado(id);
+    return (g && g !== e.p) ? esc(g) : e.n;
+  }
   return e ? e.n : esc(fallback||id);
+}
+
+/* El ultimo registro HECHO de un ejercicio antes de la fecha en pantalla, tenga o no
+   peso. lastRecord() en cambio exige peso: sirve para sugerir, no para precargar. */
+function ultimoItem(exId){
+  var ss = (D && D.sessions) ? D.sessions : [];
+  for(var i=0;i<ss.length;i++){
+    if(ss[i].date >= curDate) continue;
+    var it = ss[i].items[exId];
+    if(it && it.done) return {weight:it.weight, series:it.series, reps:it.reps, date:ss[i].date};
+  }
+  return null;
+}
+/* Un ejercicio nuevo del borrador arranca con lo que Diego hizo la ultima vez:
+   peso, series y reps. Desde ahi sube o baja a mano; la sugerencia de subir sigue
+   estando, pero ya no se aplica sola.
+   Si esa ultima vez se olvido de anotar el peso (el remo del 13/09), usa el ultimo
+   que si anoto. base = {name, group, series, reps} para cuando nunca lo hizo. */
+function precargar(id, base){
+  var u = ultimoItem(id), rec = lastRecord(id);
+  var w = '';
+  if(u && nf(u.weight) > 0) w = String(u.weight);
+  else if(rec && nf(rec.weight) > 0) w = String(rec.weight);
+  return {
+    name: nombrePlano(id, base.name),
+    group: base.group || 'superior',
+    weight: w,
+    series: String((u && u.series) || base.series || 3),
+    reps: String((u && u.reps) || base.reps || 12),
+    rir: '', done: false
+  };
 }
 
 /* ==================================================================
@@ -967,10 +1059,50 @@ function statsOf(sessions){
    BALANCE POR MUSCULO
    La base de las sugerencias y de los KPIs utiles de Progreso.
    ================================================================== */
-/* musculo de un ejercicio: el del catalogo, o derivado del tren si es uno cargado a mano */
+/* Palabras que delatan el musculo de un ejercicio cargado a mano. Primero los
+   nombres de musculo explicitos y despues maquinas y movimientos, para que
+   "curl femoral" caiga en piernas y no en biceps. Se compara contra slug() del
+   nombre, que ya viene sin acentos: nunca regex sobre acentos. */
+var MUSC_PALABRAS = [
+  ['jalon','espalda'], ['press-frances','triceps'],
+  ['tricep','triceps'], ['bicep','biceps'], ['gluteo','gluteos'],
+  ['cuadricep','piernas'], ['femoral','piernas'], ['isquio','piernas'],
+  ['gemelo','piernas'], ['pantorrilla','piernas'],
+  ['hombro','hombros'], ['deltoide','hombros'],
+  ['pecho','pecho'], ['pectoral','pecho'],
+  ['abdominal','core'], ['oblicuo','core'], ['lumbar','core'],
+  ['dorsal','espalda'], ['espalda','espalda'],
+  ['frances','triceps'], ['fondo','triceps'], ['copa','triceps'],
+  ['martillo','biceps'], ['curl','biceps'],
+  ['hip-thrust','gluteos'], ['puente','gluteos'], ['abductor','gluteos'], ['patada','gluteos'],
+  ['prensa','piernas'], ['sentadilla','piernas'], ['pierna','piernas'], ['aductor','piernas'],
+  ['estocada','piernas'], ['zancada','piernas'], ['rodilla','piernas'], ['peso-muerto','piernas'],
+  ['vuelo','hombros'], ['lateral','hombros'], ['militar','hombros'],
+  ['apertura','pecho'], ['banca','pecho'], ['peck','pecho'],
+  ['plancha','core'], ['crunch','core'], ['espinal','core'],
+  ['remo','espalda'], ['dominada','espalda'], ['polea','espalda']
+];
+function muscPorNombre(nombre){
+  var t = slug(nombre);
+  for(var i=0;i<MUSC_PALABRAS.length;i++){
+    if(t.indexOf(MUSC_PALABRAS[i][0]) !== -1) return MUSC_PALABRAS[i][1];
+  }
+  return '';
+}
+function muscLocal(){
+  try{ return JSON.parse(localStorage.getItem('gym_musc') || '{}') || {}; }catch(e){ return {}; }
+}
+/* Musculo de un ejercicio: el del catalogo. Si es cargado a mano: el que Diego eligio,
+   o el que delata su nombre, y recien al final el que se deduce del tren.
+   Hasta v12 iba directo al tren, asi que "Triceps" (tren superior) contaba como
+   ESPALDA: el 13/09 Progreso seguia diciendo que triceps nunca se habia trabajado. */
 function muscOf(id, it){
   var e = exDef(id);
   if(e && e.m) return e.m;
+  var ov = muscLocal()[id];
+  if(ov && MUSCULOS[ov]) return ov;
+  var pn = muscPorNombre(nombrePlano(id, it && it.name));
+  if(pn) return pn;
   var g = (it && it.group) || (e && e.g) || 'superior';
   return g==='medio' ? 'core' : (g==='inferior' ? 'piernas' : 'espalda');
 }
@@ -1107,12 +1239,11 @@ function usarRutina(slot){
   draft = {}; draftOrder = [];
   (r.ex||[]).forEach(function(e){
     var def = exDef(e.id);
-    draft[e.id] = previo[e.id] || {
+    draft[e.id] = previo[e.id] || precargar(e.id, {
       name: e.n || (def ? def.p : e.id),
       group: e.g || (def ? def.g : 'superior'),
-      weight:'', series:String(e.s||(def?def.s:3)), reps:String(e.r||(def?def.r:12)),
-      rir:'', done:false
-    };
+      series: e.s || (def ? def.s : 3), reps: e.r || (def ? def.r : 12)
+    });
     draftOrder.push(e.id);
   });
   draftDirty = true;
@@ -1122,7 +1253,7 @@ function usarRutina(slot){
 }
 
 function openRutinas(){
-  rutSlot = 0; rutNombre = '';
+  rutSlot = 0; rutNombre = ''; rutEdit = null; rutEditEx = null;
   renderRutinas();
   openModal();
 }
@@ -1136,14 +1267,32 @@ function renderRutinas(){
 
   if(rs.length){
     rs.forEach(function(r){
+      var ed = (rutEdit === r.slot);
       h += '<div class="rutrow">';
       h += '<button class="rut-star'+(r.def?' on':'')+'" onclick="marcarDefault('+r.slot+')">'+
            (r.def?'&#9733;':'&#9734;')+'</button>';
-      h += '<div class="rut-info"><div class="rut-n">'+esc(r.nombre)+'</div>'+
-           '<div class="rut-c">'+(r.ex||[]).length+' ejercicios</div></div>';
+      /* tocar el nombre despliega sus ejercicios para ordenarlos */
+      h += '<button class="rut-info" onclick="toggleRutEdit('+r.slot+')">'+
+           '<span class="rut-n">'+esc(r.nombre)+'</span>'+
+           '<span class="rut-c">'+(r.ex||[]).length+' ejercicios &middot; '+
+           (ed ? 'cerrar &#9650;' : 'ordenar &#9660;')+'</span></button>';
       h += '<button class="rut-usar" onclick="usarRutina('+r.slot+');closeModal()">Usar</button>';
       h += '<button class="mx" onclick="borrarRutina('+r.slot+')">&#10005;</button>';
       h += '</div>';
+      if(ed){
+        h += '<div class="rutedit">';
+        h += '<div class="hint" style="margin:10px 0">Arrastr&aacute; desde los puntitos para cambiar el orden.</div>';
+        h += '<div id="rutlist">';
+        (rutEditEx||[]).forEach(function(e){
+          h += '<div class="rutex" data-drag="'+esc(e.id)+'">'+
+               '<span class="rutex-n">'+dispName(e.id, e.n)+'</span>'+
+               '<span class="rutex-s">'+esc(e.s)+'x'+esc(e.r)+'</span>'+
+               gripHTML('rutlist')+'</div>';
+        });
+        h += '</div>';
+        h += '<button class="btn btn-p btn-full" id="btn-rutord" onclick="guardarOrdenRutina()">Guardar orden</button>';
+        h += '</div>';
+      }
     });
   } else {
     h += '<div class="empty" style="padding:18px">Todav&iacute;a no guardaste ninguna.</div>';
@@ -1208,6 +1357,262 @@ function borrarRutina(slot){
     .catch(function(e){ toast('No pude borrar: '+e.message,'err'); });
 }
 
+/* ==================================================================
+   ORDEN DE LOS EJERCICIOS (v13)
+   En la sesion del dia: se arrastra y el orden viaja con la sesion guardada.
+   En una rutina: se ordena desde el modal de rutinas.
+   La rutina de arranque manda el orden de un dia nuevo. Si Diego reordena el dia
+   y tiene rutina de arranque, aparece un boton para llevarse ese orden a la rutina:
+   si no, al dia siguiente volveria el orden viejo y pareceria que no se guardo.
+   ================================================================== */
+var rutEdit = null, rutEditEx = null;   // rutina desplegada en el modal y su copia de trabajo
+var ordenCambiado = false;              // Diego reordeno la sesion en pantalla
+
+function toggleRutEdit(slot){
+  if(rutEdit === slot){ rutEdit = null; rutEditEx = null; }
+  else {
+    var r = null;
+    rutinas().forEach(function(x){ if(x.slot === slot) r = x; });
+    rutEdit = slot;
+    rutEditEx = r ? (r.ex||[]).slice() : [];
+  }
+  renderRutinas();
+}
+function guardarOrdenRutina(){
+  if(rutEdit === null || !rutEditEx) return;
+  var rs = rutinas().map(function(r){
+    return {slot:r.slot, nombre:r.nombre, ex: r.slot === rutEdit ? rutEditEx : r.ex, def:r.def};
+  });
+  apiPost('saveRutinas', {rutinas:rs}, $('btn-rutord'))
+    .then(function(){
+      if(D) D.rutinas = rs;
+      rutEdit = null; rutEditEx = null;
+      renderRutinas(); buildTrain();
+      toast('Orden guardado','ok');
+      fetchData(true);
+    })
+    .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
+}
+
+/* la sesion en pantalla tiene los ejercicios de la rutina de arranque en otro orden */
+function ordenDistinto(){
+  var rd = rutinaDefault();
+  if(!rd || !rd.ex) return false;
+  var enRut = rd.ex.map(function(e){ return e.id; })
+                .filter(function(id){ return draftOrder.indexOf(id) !== -1; });
+  var enDraft = draftOrder.filter(function(id){ return enRut.indexOf(id) !== -1; });
+  return enRut.join('|') !== enDraft.join('|');
+}
+/* reordena la rutina de arranque como la sesion en pantalla. Los ejercicios que la
+   rutina tiene y hoy no estan quedan al final, en el orden que tenian. */
+function guardarOrdenEnRutina(){
+  var rd = rutinaDefault();
+  if(!rd) return;
+  var pos = {};
+  draftOrder.forEach(function(id, i){ pos[id] = i; });
+  var ex = rd.ex.slice().sort(function(a, b){
+    var pa = (pos[a.id] === undefined) ? 1e6 + rd.ex.indexOf(a) : pos[a.id];
+    var pb = (pos[b.id] === undefined) ? 1e6 + rd.ex.indexOf(b) : pos[b.id];
+    return pa - pb;
+  });
+  var rs = rutinas().map(function(r){
+    return {slot:r.slot, nombre:r.nombre, ex: r.slot === rd.slot ? ex : r.ex, def:r.def};
+  });
+  apiPost('saveRutinas', {rutinas:rs}, $('btn-ordrut'))
+    .then(function(){
+      if(D) D.rutinas = rs;
+      ordenCambiado = false;
+      buildTrain();
+      toast('Orden guardado en <b>'+esc(rd.nombre)+'</b>','ok');
+      fetchData(true);
+    })
+    .catch(function(e){ toast('No pude guardar: '+e.message,'err'); });
+}
+
+/* ---- arrastrar para ordenar ----
+   Pointer events, sin librerias. El agarre es solo el icono de puntitos, con
+   touch-action:none: asi el resto de la tarjeta sigue scrolleando la pagina normal
+   y tocar el nombre sigue abriendo el ejercicio.
+   La posicion se recalcula en cada cuadro contra el lugar natural del elemento
+   (transform en cero, se mide, se vuelve a aplicar): funciona igual si la lista se
+   reordena debajo o si la pantalla scrollea sola cerca de los bordes. */
+var drag = null;
+var DRAG_FIN = {
+  exlist: function(ids){
+    draftOrder = ids;
+    draftDirty = true;
+    ordenCambiado = true;
+    buildTrain();
+  },
+  rutlist: function(ids){
+    var porId = {};
+    (rutEditEx||[]).forEach(function(e){ porId[e.id] = e; });
+    rutEditEx = ids.map(function(id){ return porId[id]; }).filter(Boolean);
+    /* el DOM ya esta en el orden nuevo: no hace falta re-renderizar el modal */
+  }
+};
+
+function gripHTML(listId){
+  return '<span class="grip" onpointerdown="dragStart(event,\''+listId+'\')" title="Arrastrar para ordenar">'+
+         '<svg viewBox="0 0 10 16" aria-hidden="true">'+
+         '<circle cx="2.5" cy="3" r="1.5"/><circle cx="7.5" cy="3" r="1.5"/>'+
+         '<circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/>'+
+         '<circle cx="2.5" cy="13" r="1.5"/><circle cx="7.5" cy="13" r="1.5"/></svg></span>';
+}
+
+function dragStart(ev, listId){
+  if(drag) return;
+  if(ev.pointerType === 'mouse' && ev.button !== 0) return;
+  var handle = ev.currentTarget || ev.target;
+  var item = handle.closest('[data-drag]');
+  var list = $(listId);
+  if(!item || !list) return;
+  ev.preventDefault();
+  var r = item.getBoundingClientRect();
+  drag = {listId:listId, list:list, item:item, pid:ev.pointerId,
+          grab: ev.clientY - r.top, y: ev.clientY, movido:false, raf:0,
+          scroller: item.closest('#modal-box')};
+  try{ handle.setPointerCapture(ev.pointerId); }catch(e){}
+  item.classList.add('dragging');
+  document.body.classList.add('arrastrando');
+  document.addEventListener('pointermove', dragMove, {passive:false});
+  document.addEventListener('pointerup', dragEnd);
+  document.addEventListener('pointercancel', dragEnd);
+  drag.raf = requestAnimationFrame(dragTick);
+}
+function dragMove(ev){
+  if(!drag || ev.pointerId !== drag.pid) return;
+  ev.preventDefault();
+  drag.y = ev.clientY;
+  drag.movido = true;
+  dragPos();
+}
+function dragPos(){
+  var it = drag.item, list = drag.list, sigue = true;
+  while(sigue){
+    sigue = false;
+    var prev = it.previousElementSibling, next = it.nextElementSibling;
+    if(prev && prev.hasAttribute('data-drag')){
+      var pr = prev.getBoundingClientRect();
+      if(drag.y < pr.top + pr.height/2){ list.insertBefore(it, prev); sigue = true; continue; }
+    }
+    if(next && next.hasAttribute('data-drag')){
+      var nr = next.getBoundingClientRect();
+      if(drag.y > nr.top + nr.height/2){ list.insertBefore(next, it); sigue = true; }
+    }
+  }
+  it.style.transform = '';
+  var top = it.getBoundingClientRect().top;
+  it.style.transform = 'translateY('+(drag.y - drag.grab - top)+'px)';
+}
+/* scroll automatico cerca de los bordes: sin esto no se puede llevar el primer
+   ejercicio al final de una lista mas larga que la pantalla */
+function dragTick(){
+  if(!drag) return;
+  if(drag.movido){
+    var sc = drag.scroller, top, bot;
+    if(sc){ var sr = sc.getBoundingClientRect(); top = sr.top; bot = sr.bottom; }
+    else {
+      var nav = document.querySelector('nav.tabs');
+      top = nav ? nav.getBoundingClientRect().bottom : 0;
+      bot = window.innerHeight;
+    }
+    var zona = 70, v = 0;
+    if(drag.y < top + zona) v = -Math.ceil((top + zona - drag.y) / 5);
+    else if(drag.y > bot - zona) v = Math.ceil((drag.y - (bot - zona)) / 5);
+    if(v){
+      if(sc) sc.scrollTop += v; else window.scrollBy(0, v);
+      dragPos();
+    }
+  }
+  drag.raf = requestAnimationFrame(dragTick);
+}
+function dragEnd(ev){
+  if(!drag || (ev && ev.pointerId !== undefined && ev.pointerId !== drag.pid)) return;
+  cancelAnimationFrame(drag.raf);
+  document.removeEventListener('pointermove', dragMove, {passive:false});
+  document.removeEventListener('pointerup', dragEnd);
+  document.removeEventListener('pointercancel', dragEnd);
+  var d = drag;
+  drag = null;
+  d.item.classList.remove('dragging');
+  d.item.style.transform = '';
+  document.body.classList.remove('arrastrando');
+  var ids = [].slice.call(d.list.querySelectorAll('[data-drag]'))
+              .map(function(x){ return x.getAttribute('data-drag'); });
+  if(d.movido && DRAG_FIN[d.listId]) DRAG_FIN[d.listId](ids);
+}
+
+/* ==================================================================
+   RENOMBRAR (v13)
+   Cambia solo lo que se ve. El ID no se toca, asi que records, progresion y
+   estancados siguen iguales. Queda en el celular al instante y en la planilla
+   cuando se guarda la sesion (la columna Ejercicio lleva el nombre nuevo).
+   ================================================================== */
+var renId = null, renNombre = '', renMusc = '';
+
+function openRenombrar(id){
+  renId = id;
+  renNombre = nombrePlano(id, draft[id] ? draft[id].name : '');
+  renMusc = muscOf(id, draft[id]);
+  renderRenombrar();
+  openModal();
+}
+function renderRenombrar(){
+  var def = exDef(renId);
+  var h = '';
+  h += '<div class="mttl"><h3>Renombrar ejercicio</h3><button class="mx" onclick="closeModal()">&#10005;</button></div>';
+  h += '<div class="hint" style="margin-bottom:14px">Tu historial y tus r&eacute;cords <b>no se tocan</b>: '+
+       'la app reconoce cada ejercicio por un c&oacute;digo interno, no por el nombre.</div>';
+  h += '<div class="fl kick" style="margin-bottom:5px">Nombre</div>'+
+       '<input type="text" id="ren-n" value="'+esc(renNombre)+'" oninput="renNombre=this.value" style="margin-bottom:16px">';
+  /* los del catalogo ya tienen musculo fijo; los cargados a mano lo pueden corregir */
+  if(!def || def.custom){
+    h += '<div class="fl kick" style="margin-bottom:6px">M&uacute;sculo</div><div class="musc-grow">';
+    MORDER.forEach(function(m){
+      h += '<button class="gbtn musc-btn'+(renMusc===m?' on':'')+'" data-m="'+m+'" onclick="setRenMusc(\''+m+'\')">'+
+           MUSCULOS[m].lbl+'</button>';
+    });
+    h += '</div><div class="hint" style="margin:7px 0 16px">Es lo que usa <b>Qu&eacute; te falta</b> en Progreso.</div>';
+  }
+  h += '<button class="btn btn-p btn-full" onclick="guardarNombre()">Guardar</button>';
+  if(def && !def.custom && nombrePlano(renId) !== def.p){
+    h += '<button class="btn btn-o btn-full" style="margin-top:8px" onclick="restaurarNombre()">Volver al nombre original</button>';
+  }
+  $('modal-box').innerHTML = h;
+}
+/* solo cambia clases: re-renderizar borraria el nombre que se esta escribiendo */
+function setRenMusc(m){
+  renMusc = m;
+  var bs = document.querySelectorAll('#modal-box .musc-btn');
+  for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].dataset.m === m);
+}
+function guardarNombre(){
+  var n = (renNombre||'').trim();
+  if(!n){ toast('Escrib&iacute; un nombre','err'); return; }
+  var def = exDef(renId);
+  var map = nombresLocal();
+  map[renId] = n;
+  try{ localStorage.setItem('gym_nombres', JSON.stringify(map)); }catch(e){}
+  if(!def || def.custom){
+    /* si el musculo elegido es el mismo que delata el nombre, no fijo nada:
+       asi un renombre futuro lo vuelve a deducir */
+    var mm = muscLocal();
+    if(renMusc && renMusc !== muscPorNombre(n)) mm[renId] = renMusc; else delete mm[renId];
+    try{ localStorage.setItem('gym_musc', JSON.stringify(mm)); }catch(e){}
+  }
+  if(draft[renId]){ draft[renId].name = n; draftDirty = true; }
+  closeModal();
+  render();
+  toast('Renombrado &middot; guard&aacute; la sesi&oacute;n para que quede en la planilla','ok');
+}
+function restaurarNombre(){
+  var def = exDef(renId);
+  if(!def) return;
+  renNombre = def.p;
+  guardarNombre();
+}
+
 /* ---------------- ENTRENAR ---------------- */
 function buildTrain(){
   var h='';
@@ -1240,17 +1645,24 @@ function buildTrain(){
     h += '<div class="empty">No hay ejercicios en esta sesi&oacute;n.</div>';
   }
 
+  if(ordenCambiado && draftOrder.length > 1 && ordenDistinto()){
+    h += '<div class="ordbar"><span>Cambiaste el orden</span>'+
+         '<button class="sug up" id="btn-ordrut" onclick="guardarOrdenEnRutina()">Guardarlo en '+
+         esc(rutinaDefault().nombre)+'</button></div>';
+  }
+
+  h += '<div id="exlist">';
   draftOrder.forEach(function(id){
     var st = draft[id];
     if(!st) return;
     var rec = lastRecord(id);
     var sg  = suggest(rec, id);
     var def = exDef(id);
-    var yq  = def ? def.p : st.name;
+    var yq  = nombrePlano(id, st.name);
 
     var abierto = (openEx === id);
 
-    h += '<div class="ex'+(st.done?' done':'')+(abierto?' open':'')+'" id="ex-'+id+'">';
+    h += '<div class="ex'+(st.done?' done':'')+(abierto?' open':'')+'" id="ex-'+id+'" data-drag="'+id+'">';
 
     /* cabecera: siempre visible, solo el nombre. Tocarla abre o cierra. */
     h +=   '<div class="ex-head">';
@@ -1271,6 +1683,7 @@ function buildTrain(){
                   (res.length ? ' &middot; '+res.join(' &middot; ') : '')+'</span>'
                 : (res.length ? '<span class="ex-res">'+res.join(' &middot; ')+'</span>' : ''))+
              '</button>';
+    if(draftOrder.length > 1) h += gripHTML('exlist');
     h +=     '<button class="ex-chev" onclick="toggleOpen(\''+id+'\')">'+
              '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>';
     h +=   '</div>';
@@ -1282,6 +1695,8 @@ function buildTrain(){
       h +=   '<div class="ex-sub">';
       h +=     '<span class="gpill '+st.group+'">'+GRUPOS[st.group].lbl+'</span>';
       h +=     '<div class="ex-acts">'+
+               '<button class="iconbtn" onclick="openRenombrar(\''+id+'\')" title="Renombrar">'+
+               '<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'+
                '<button class="iconbtn yt" onclick="yt(\''+jsq(yq)+'\')" title="Ver t&eacute;cnica">'+
                '<svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg></button>'+
                '<button class="iconbtn rm" onclick="removeEx(\''+id+'\')" title="Sacar de esta sesi&oacute;n">'+
@@ -1321,7 +1736,13 @@ function buildTrain(){
         if(sg) h += '<button class="sug '+(sg.up?'up':'same')+'" onclick="applySug(\''+id+'\','+sg.v+')">'+
                     (sg.up?'&#9650; Sub&iacute; a '+fKg(sg.v):'Repet&iacute; '+fKg(sg.v))+' kg</button>';
       } else {
-        h +=   '<span class="meta">Sin registro previo</span>';
+        /* sin peso (captain's chair): igual se muestra que hizo la ultima vez */
+        var ui = ultimoItem(id);
+        if(ui && ui.series && ui.reps){
+          h += '<span class="meta">&Uacute;ltimo: <b>'+esc(ui.series)+'x'+esc(ui.reps)+'</b> &middot; '+fShort(ui.date)+'</span>';
+        } else {
+          h += '<span class="meta">Sin registro previo</span>';
+        }
       }
       h +=   '</div>';
 
@@ -1349,6 +1770,7 @@ function buildTrain(){
     }
     h += '</div>';
   });
+  h += '</div>';
 
   h += '<button class="btn btn-dash" onclick="openAdd()" style="margin-top:4px">'+
        '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Agregar ejercicio</button>';
@@ -1543,9 +1965,10 @@ function sessionFor(date){
   return null;
 }
 
-/* arma el borrador: la sesion guardada de esa fecha, o la rutina base */
+/* arma el borrador: la sesion guardada de esa fecha; si no hay, la rutina de arranque
+   (o la base) con el peso, las series y las reps de la ultima vez */
 function loadDraft(){
-  draft={}; draftOrder=[]; notesDraft='';
+  draft={}; draftOrder=[]; notesDraft=''; ordenCambiado=false;
   var s = sessionFor(curDate);
   if(s){
     (s.order && s.order.length ? s.order : Object.keys(s.items)).forEach(function(id){
@@ -1558,20 +1981,19 @@ function loadDraft(){
   } else {
     /* si hay una rutina propia marcada de arranque, se usa esa en vez de RUTINA_BASE */
     var rd = rutinaDefault();
-    if(rd && rd.ex && rd.ex.length){
-      rd.ex.forEach(function(e){
-        var def = exDef(e.id);
-        draft[e.id]={name:e.n||(def?def.p:e.id), group:e.g||(def?def.g:'superior'),
-                     weight:'', series:String(e.s||(def?def.s:3)), reps:String(e.r||(def?def.r:12)),
-                     rir:'', done:false};
-        draftOrder.push(e.id);
-      });
-    } else {
-      RUTINA_BASE.forEach(function(e){
-        draft[e.id]={name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
-        draftOrder.push(e.id);
-      });
-    }
+    var lista = (rd && rd.ex && rd.ex.length)
+      ? rd.ex.map(function(e){
+          var def = exDef(e.id);
+          return {id:e.id, name:e.n||(def?def.p:e.id), group:e.g||(def?def.g:'superior'),
+                  series:e.s||(def?def.s:3), reps:e.r||(def?def.r:12)};
+        })
+      : RUTINA_BASE.map(function(e){
+          return {id:e.id, name:e.p, group:e.g, series:e.s, reps:e.r};
+        });
+    lista.forEach(function(e){
+      draft[e.id] = precargar(e.id, e);
+      draftOrder.push(e.id);
+    });
   }
 }
 
@@ -1705,16 +2127,10 @@ function setNewGroup(g){
 function addFromCat(id){
   var e = allKnown()[id];
   if(!e) return;
-  draft[id] = {name:e.p, group:e.g, weight:'', series:String(e.s), reps:String(e.r), rir:'', done:false};
+  draft[id] = precargar(id, {name:e.p, group:e.g, series:e.s, reps:e.r});
   draftOrder.push(id);
   openEx = id;
-  var rec = lastRecord(id);
-  if(rec){
-    var sg = suggest(rec, id);
-    if(sg) draft[id].weight = String(sg.v);
-    if(rec.series) draft[id].series = String(rec.series);
-    if(rec.reps) draft[id].reps = String(rec.reps);
-  }
+  draftDirty = true;
   closeModal(); buildTrain();
   toast(e.n+' agregado','ok');
 }
@@ -2254,30 +2670,33 @@ function racha(){
 /* ==================================================================
    RECORDS
    ================================================================== */
-/* Valor con el que progresa un ejercicio. Con peso -> kg. Sin peso -> reps por
-   serie (no series x reps: agregar una serie es mas volumen, no mas fuerza). */
+/* Valor con el que progresa un ejercicio.
+   Con peso -> los kg.
+   Sin peso (captain's chair, abdominales) -> las repeticiones TOTALES, series x reps.
+   Hasta v12 eran reps por serie, con el argumento de que sumar una serie es volumen
+   y no fuerza. En un ejercicio sin carga eso no se sostiene: no hay peso que subir,
+   y pasar de 3x15 a 4x15 es justamente como se progresa. Diego lo hizo el 13/09 y
+   la app le decia que no habia progreso. */
 function valorDe(it){
+  var sr = nf(it.series)+'x'+nf(it.reps);
   var w = nf(it.weight);
-  if(w > 0) return {v:w, u:'kg', peso:true};
-  var r = nf(it.reps);
-  return r > 0 ? {v:r, u:'reps', peso:false} : null;
-}
-function fVal(v, peso){
-  return peso ? fKg(v)+' kg' : Math.round(v)+' reps';
+  if(w > 0) return {v:w, peso:true, sr:sr, txt:fKg(w)+' kg'};
+  var tot = nf(it.series) * nf(it.reps);
+  return tot > 0 ? {v:tot, peso:false, sr:sr, txt:sr} : null;
 }
 
-/* Maximo de un ejercicio en las sesiones ANTERIORES a una fecha. null si nunca. */
+/* La mejor marca de un ejercicio en las sesiones ANTERIORES a una fecha. null si nunca. */
 function recordDe(exId, antesDe, modoPeso){
-  var max = null;
+  var best = null;
   ((D && D.sessions) ? D.sessions : []).forEach(function(s){
     if(antesDe && s.date >= antesDe) return;
     var it = s.items[exId];
     if(!it || !it.done) return;
     var v = valorDe(it);
     if(!v || v.peso !== modoPeso) return;
-    if(max === null || v.v > max) max = v.v;
+    if(best === null || v.v > best.v) best = v;
   });
-  return max;
+  return best;
 }
 
 /* Records rotos en una sesion. El debut no cuenta: la primera vez que hacer un
@@ -2291,8 +2710,8 @@ function prsDe(s){
     var v = valorDe(it);
     if(!v) return;
     var prev = recordDe(id, s.date, v.peso);
-    if(prev === null || v.v <= prev) return;
-    out.push({id:id, name:it.name, de:prev, a:v.v, u:v.u, peso:v.peso});
+    if(prev === null || v.v <= prev.v) return;
+    out.push({id:id, name:it.name, de:prev.v, a:v.v, deTxt:prev.txt, aTxt:v.txt, peso:v.peso});
   });
   out.sort(function(a,b){ return (b.a/b.de) - (a.a/a.de); });
   return out;
@@ -2321,11 +2740,11 @@ function progresionEx(){
       if(!it || !it.done) return;
       var v = valorDe(it);
       if(!v) return;
-      if(!map[id]){ map[id] = {id:id, name:it.name, peso:v.peso, vals:[], sr:''}; orden.push(id); }
+      if(!map[id]){ map[id] = {id:id, name:it.name, peso:v.peso, vals:[], srPri:v.sr, sr:''}; orden.push(id); }
       var e = map[id];
       if(v.peso !== e.peso) return;   /* no mezclo kg con reps */
       e.vals.push(v.v);
-      e.sr = nf(it.series)+'x'+nf(it.reps);
+      e.sr = v.sr;
       e.ses = e.vals.length;
     });
   });
@@ -2495,7 +2914,7 @@ function recordsHTML(){
            '<span class="pr-up">&#9650;</span>'+
            '<span class="hex-n">'+dispName(p.id, p.name)+'</span>'+
            '<span class="hex-v" style="color:var(--green-2)">'+
-             fVal(p.de,p.peso)+' &rarr; '+fVal(p.a,p.peso)+'</span></div>';
+             p.deTxt+' &rarr; '+p.aTxt+'</span></div>';
     });
     h += '<div class="hint" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--hairline)">'+
          '<b>'+prs.length+(prs.length===1?' r&eacute;cord':' r&eacute;cords')+'</b> el '+fShort(ult.date)+
@@ -2514,7 +2933,7 @@ function recordsHTML(){
     h += '<div class="hex"><span class="pr-up">&#9650;</span>'+
          '<span class="hex-n">'+dispName(p0.id, p0.name)+'<br>'+
          '<span class="hm">&uacute;ltimo r&eacute;cord &middot; '+fShort(u.date)+'</span></span>'+
-         '<span class="hex-v" style="color:var(--green-2)">'+fVal(p0.a,p0.peso)+'</span></div>';
+         '<span class="hex-v" style="color:var(--green-2)">'+p0.aTxt+'</span></div>';
     if(u.desde >= 3){
       h += '<div class="hint" style="margin-top:12px;padding-top:11px;border-top:1px solid var(--hairline)">'+
            'Hace <b>'+u.desde+' sesiones</b> que no rompes un r&eacute;cord. '+
@@ -2540,11 +2959,16 @@ function progresionHTML(){
     var col = sube ? 'var(--green)' : 'var(--dim)';
     h += '<div class="prow">';
     h += '<span class="prow-n">'+dispName(e.id, e.name)+'</span>';
-    h += sparkline(e.vals, e.peso ? (sube?'#2BE08A':'#5E5E70') : '#3BE0D0');
+    h += sparkline(e.vals, sube ? (e.peso ? '#2BE08A' : '#3BE0D0') : '#5E5E70');
     h += '<span class="prow-v">';
     if(e.peso){
       h += fKg(e.pri)+' &rarr; '+fKg(e.ult)+' kg';
       h += '<br><span class="prow-p" style="color:'+col+'">'+(sube?'+':'')+e.pct+'%</span>';
+    } else if(e.ses > 1){
+      /* sin peso: de la primera a la ultima vez en series x reps, y cuanto crecio el total */
+      h += e.srPri+' &rarr; '+e.sr;
+      h += '<br><span class="prow-p" style="color:'+(sube?'var(--cyan)':'var(--dim)')+'">'+
+           (sube?'+':'')+e.pct+'%</span>';
     } else {
       h += e.sr;
       h += '<br><span class="prow-p" style="color:var(--muted)">'+e.ses+

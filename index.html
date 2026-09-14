@@ -442,6 +442,18 @@ body.modal-open{position:fixed;width:100%;overflow:hidden}
 .sug-item{align-items:flex-start}
 .sug-item:hover{background:rgba(43,224,138,.12);border-color:var(--green)}
 .sug-item .cn{line-height:1.3}
+/* ---------- diccionario (v15) ---------- */
+.catlist{max-height:300px}
+.catitem .cdet{display:block;margin-top:2px;font-family:'Asap Condensed',sans-serif;font-size:.7rem;
+  font-weight:600;letter-spacing:.04em;color:var(--muted)}
+.muscbar{display:flex;gap:6px;overflow-x:auto;margin:0 0 10px;padding-bottom:2px;scrollbar-width:none}
+.muscbar::-webkit-scrollbar{display:none}
+.mpill{flex:0 0 auto;min-height:34px;padding:6px 13px;border-radius:17px;border:1px solid var(--border);
+  background:var(--surface2);font-family:'Asap Condensed',sans-serif;font-size:.76rem;font-weight:700;
+  letter-spacing:.03em;color:var(--muted)}
+.mpill.on{background:var(--violet);border-color:var(--violet);color:#fff}
+.matchbox{margin-top:8px;padding:8px 6px 4px;border:1px dashed var(--violet);border-radius:var(--r);
+  background:var(--violet-lt)}
 /* barras de balance semanal por musculo */
 .mrow{margin-bottom:12px}
 .mtop{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;gap:8px}
@@ -661,7 +673,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v14';
+var APP_VER   = 'v15';
 
 /* ==================================================================
    EJERCICIOS
@@ -707,6 +719,179 @@ var CATALOGO = [
   {id:'c6', n:'Abdominales bisagra a una pierna',                p:'Abdominal bisagra a una pierna', g:'medio', m:'core', s:3, r:10, d:45},
   {id:'c7', n:'Espinales en colchoneta',                         p:'Espinales en colchoneta lumbares', g:'medio', m:'core', s:3, r:12, d:45}
 ];
+
+/* DICCIONARIO de ejercicios (v15). Nombres de gimnasio argentino, escritos a mano.
+   El musculo se valido contra free-exercise-db (dominio publico). Los IDs d-* no se cambian nunca:
+   son la clave del historial, igual que a0..c7. mm = musculo especifico; al = alias de busqueda. */
+var DICCIONARIO = [
+  {id:'d-polea-al-pecho-agarre-abierto', n:'Polea al pecho agarre abierto', p:'Polea al pecho agarre abierto', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'jalon dorsalera polea alta lat pulldown', s:4, r:12, d:120},
+  {id:'d-polea-al-pecho-agarre-cerrado', n:'Polea al pecho agarre cerrado', p:'Polea al pecho agarre cerrado', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'jalon triangulo polea alta', s:3, r:12, d:120},
+  {id:'d-polea-al-pecho-agarre-supino', n:'Polea al pecho agarre supino', p:'Polea al pecho agarre supino', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'jalon supino polea alta', s:3, r:12, d:120},
+  {id:'d-polea-al-pecho-a-un-brazo', n:'Polea al pecho a un brazo', p:'Polea al pecho a un brazo', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'jalon unilateral polea alta', s:3, r:12, d:90},
+  {id:'d-polea-tras-nuca', n:'Polea tras nuca', p:'Polea tras nuca', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'jalon nuca polea alta', s:3, r:12, d:120},
+  {id:'d-polea-al-pecho-en-maquina-hammer', n:'Polea al pecho en m&aacute;quina Hammer', p:'Polea al pecho en maquina Hammer', g:'superior', m:'espalda', mm:'Dorsal', eq:'M&aacute;quina', al:'dorsal hammer jalon maquina', s:3, r:12, d:120},
+  {id:'d-dominadas', n:'Dominadas', p:'Dominadas', g:'superior', m:'espalda', mm:'Dorsal', eq:'Peso corporal', al:'barra fija pull up', s:3, r:8, d:120},
+  {id:'d-dominadas-supinas', n:'Dominadas supinas', p:'Dominadas supinas', g:'superior', m:'espalda', mm:'Dorsal', eq:'Peso corporal', al:'chin up barra fija', s:3, r:8, d:120},
+  {id:'d-dominadas-asistidas-en-maquina', n:'Dominadas asistidas en m&aacute;quina', p:'Dominadas asistidas en maquina', g:'superior', m:'espalda', mm:'Dorsal', eq:'M&aacute;quina', al:'asistida barra fija', s:3, r:10, d:120},
+  {id:'d-pullover-en-polea-alta', n:'Pullover en polea alta', p:'Pullover en polea alta', g:'superior', m:'espalda', mm:'Dorsal', eq:'Polea', al:'pull over brazos rectos', s:3, r:12, d:60},
+  {id:'d-pullover-con-mancuerna', n:'Pullover con mancuerna', p:'Pullover con mancuerna', g:'superior', m:'pecho', mm:'Pecho', eq:'Mancuernas', al:'pull over', s:3, r:12, d:60},
+  {id:'d-remo-con-barra', n:'Remo con barra', p:'Remo con barra', g:'superior', m:'espalda', mm:'Espalda media', eq:'Barra', al:'remo inclinado', s:3, r:10, d:120},
+  {id:'d-remo-con-mancuerna-a-un-brazo', n:'Remo con mancuerna a un brazo', p:'Remo con mancuerna a un brazo', g:'superior', m:'espalda', mm:'Espalda media', eq:'Mancuernas', al:'serrucho remo unilateral', s:3, r:10, d:90},
+  {id:'d-remo-con-mancuernas-en-banco-inclinado', n:'Remo con mancuernas en banco inclinado', p:'Remo con mancuernas en banco inclinado', g:'superior', m:'espalda', mm:'Espalda media', eq:'Mancuernas', al:'remo pecho apoyado', s:3, r:10, d:90},
+  {id:'d-remo-en-barra-t', n:'Remo en barra T', p:'Remo en barra T', g:'superior', m:'espalda', mm:'Espalda media', eq:'Barra', al:'remo T', s:3, r:10, d:120},
+  {id:'d-remo-sentado-en-maquina', n:'Remo sentado en m&aacute;quina', p:'Remo sentado en maquina', g:'superior', m:'espalda', mm:'Espalda media', eq:'M&aacute;quina', al:'remo hammer remo maquina', s:3, r:12, d:90},
+  {id:'d-remo-en-polea-baja-agarre-abierto', n:'Remo en polea baja agarre abierto', p:'Remo en polea baja agarre abierto', g:'superior', m:'espalda', mm:'Espalda media', eq:'Polea', al:'remo sentado polea', s:3, r:12, d:90},
+  {id:'d-remo-en-multipower', n:'Remo en multipower', p:'Remo en multipower', g:'superior', m:'espalda', mm:'Espalda media', eq:'Multipower', al:'remo smith', s:3, r:10, d:90},
+  {id:'d-remo-invertido', n:'Remo invertido', p:'Remo invertido', g:'superior', m:'espalda', mm:'Espalda media', eq:'Peso corporal', al:'remo australiano', s:3, r:10, d:90},
+  {id:'d-encogimientos-con-mancuernas', n:'Encogimientos con mancuernas', p:'Encogimientos con mancuernas', g:'superior', m:'espalda', mm:'Trapecio', eq:'Mancuernas', al:'trapecio shrug', s:3, r:12, d:60},
+  {id:'d-encogimientos-con-barra', n:'Encogimientos con barra', p:'Encogimientos con barra', g:'superior', m:'espalda', mm:'Trapecio', eq:'Barra', al:'trapecio shrug', s:3, r:12, d:60},
+  {id:'d-encogimientos-en-multipower', n:'Encogimientos en multipower', p:'Encogimientos en multipower', g:'superior', m:'espalda', mm:'Trapecio', eq:'Multipower', al:'trapecio shrug smith', s:3, r:12, d:60},
+  {id:'d-peso-muerto-con-barra', n:'Peso muerto con barra', p:'Peso muerto con barra', g:'superior', m:'espalda', mm:'Espalda baja', eq:'Barra', al:'peso muerto convencional deadlift', s:3, r:8, d:150},
+  {id:'d-press-de-banca-plano-con-barra', n:'Press de banca plano con barra', p:'Press de banca plano con barra', g:'superior', m:'pecho', mm:'Pecho', eq:'Barra', al:'pecho plano banco plano', s:4, r:10, d:120},
+  {id:'d-press-de-banca-inclinado-con-barra', n:'Press de banca inclinado con barra', p:'Press de banca inclinado con barra', g:'superior', m:'pecho', mm:'Pecho superior', eq:'Barra', al:'pecho inclinado banco inclinado', s:3, r:10, d:120},
+  {id:'d-press-de-banca-declinado-con-barra', n:'Press de banca declinado con barra', p:'Press de banca declinado con barra', g:'superior', m:'pecho', mm:'Pecho inferior', eq:'Barra', al:'pecho declinado', s:3, r:10, d:120},
+  {id:'d-press-plano-con-mancuernas', n:'Press plano con mancuernas', p:'Press plano con mancuernas', g:'superior', m:'pecho', mm:'Pecho', eq:'Mancuernas', al:'pecho con mancuernas banco plano', s:3, r:10, d:120},
+  {id:'d-press-inclinado-con-mancuernas', n:'Press inclinado con mancuernas', p:'Press inclinado con mancuernas', g:'superior', m:'pecho', mm:'Pecho superior', eq:'Mancuernas', al:'pecho inclinado mancuernas', s:3, r:10, d:120},
+  {id:'d-press-declinado-con-mancuernas', n:'Press declinado con mancuernas', p:'Press declinado con mancuernas', g:'superior', m:'pecho', mm:'Pecho inferior', eq:'Mancuernas', al:'pecho declinado mancuernas', s:3, r:10, d:120},
+  {id:'d-press-plano-en-multipower', n:'Press plano en multipower', p:'Press plano en multipower', g:'superior', m:'pecho', mm:'Pecho', eq:'Multipower', al:'smith plano pecho', s:3, r:10, d:120},
+  {id:'d-press-inclinado-en-multipower', n:'Press inclinado en multipower', p:'Press inclinado en multipower', g:'superior', m:'pecho', mm:'Pecho superior', eq:'Multipower', al:'smith inclinado pecho', s:3, r:10, d:120},
+  {id:'d-press-inclinado-en-maquina-hammer', n:'Press inclinado en m&aacute;quina Hammer', p:'Press inclinado en maquina Hammer', g:'superior', m:'pecho', mm:'Pecho superior', eq:'M&aacute;quina', al:'pecho hammer inclinado', s:3, r:10, d:120},
+  {id:'d-aperturas-con-mancuernas-en-banco-plano', n:'Aperturas con mancuernas en banco plano', p:'Aperturas con mancuernas en banco plano', g:'superior', m:'pecho', mm:'Pecho', eq:'Mancuernas', al:'aperturas flyes', s:3, r:12, d:60},
+  {id:'d-aperturas-con-mancuernas-en-banco-inclin', n:'Aperturas con mancuernas en banco inclinado', p:'Aperturas con mancuernas en banco inclinado', g:'superior', m:'pecho', mm:'Pecho superior', eq:'Mancuernas', al:'aperturas inclinado flyes', s:3, r:12, d:60},
+  {id:'d-aperturas-en-polea-en-banco-plano', n:'Aperturas en polea en banco plano', p:'Aperturas en polea en banco plano', g:'superior', m:'pecho', mm:'Pecho', eq:'Polea', al:'aperturas polea', s:3, r:12, d:60},
+  {id:'d-cruce-de-poleas', n:'Cruce de poleas', p:'Cruce de poleas', g:'superior', m:'pecho', mm:'Pecho', eq:'Polea', al:'crossover cruces', s:3, r:12, d:60},
+  {id:'d-cruce-de-poleas-desde-abajo', n:'Cruce de poleas desde abajo', p:'Cruce de poleas desde abajo', g:'superior', m:'pecho', mm:'Pecho superior', eq:'Polea', al:'crossover bajo cruces', s:3, r:12, d:60},
+  {id:'d-flexiones-de-brazos', n:'Flexiones de brazos', p:'Flexiones de brazos', g:'superior', m:'pecho', mm:'Pecho', eq:'Peso corporal', al:'lagartijas push up', s:3, r:12, d:60},
+  {id:'d-flexiones-con-manos-en-banco', n:'Flexiones con manos en banco', p:'Flexiones con manos en banco', g:'superior', m:'pecho', mm:'Pecho inferior', eq:'Peso corporal', al:'flexiones inclinadas lagartijas', s:3, r:12, d:60},
+  {id:'d-fondos-en-paralelas-para-pecho', n:'Fondos en paralelas para pecho', p:'Fondos en paralelas para pecho', g:'superior', m:'pecho', mm:'Pecho inferior', eq:'Peso corporal', al:'paralelas dips', s:3, r:10, d:90},
+  {id:'d-press-militar-con-barra', n:'Press militar con barra', p:'Press militar con barra', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Barra', al:'press de hombros militar', s:3, r:10, d:120},
+  {id:'d-press-militar-sentado-con-barra', n:'Press militar sentado con barra', p:'Press militar sentado con barra', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Barra', al:'press de hombros militar sentado', s:3, r:10, d:120},
+  {id:'d-press-de-hombros-con-mancuernas', n:'Press de hombros con mancuernas', p:'Press de hombros con mancuernas', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Mancuernas', al:'press militar mancuernas', s:3, r:10, d:120},
+  {id:'d-press-arnold', n:'Press Arnold', p:'Press Arnold', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Mancuernas', al:'arnold hombros', s:3, r:10, d:90},
+  {id:'d-press-de-hombros-en-multipower', n:'Press de hombros en multipower', p:'Press de hombros en multipower', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Multipower', al:'smith hombros militar', s:3, r:10, d:120},
+  {id:'d-press-de-hombros-en-maquina', n:'Press de hombros en m&aacute;quina', p:'Press de hombros en maquina', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'M&aacute;quina', al:'hombros maquina militar', s:3, r:10, d:120},
+  {id:'d-vuelos-laterales-en-polea', n:'Vuelos laterales en polea', p:'Vuelos laterales en polea', g:'superior', m:'hombros', mm:'Deltoides lateral', eq:'Polea', al:'laterales elevaciones laterales', s:3, r:12, d:60},
+  {id:'d-vuelos-laterales-en-maquina', n:'Vuelos laterales en m&aacute;quina', p:'Vuelos laterales en maquina', g:'superior', m:'hombros', mm:'Deltoides lateral', eq:'M&aacute;quina', al:'laterales elevaciones laterales', s:3, r:12, d:60},
+  {id:'d-vuelos-frontales-con-mancuernas', n:'Vuelos frontales con mancuernas', p:'Vuelos frontales con mancuernas', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Mancuernas', al:'frontales elevaciones frontales', s:3, r:12, d:60},
+  {id:'d-vuelos-frontales-en-polea', n:'Vuelos frontales en polea', p:'Vuelos frontales en polea', g:'superior', m:'hombros', mm:'Deltoides anterior', eq:'Polea', al:'frontales elevaciones frontales', s:3, r:12, d:60},
+  {id:'d-vuelos-posteriores-con-mancuernas', n:'Vuelos posteriores con mancuernas', p:'Vuelos posteriores con mancuernas', g:'superior', m:'hombros', mm:'Deltoides posterior', eq:'Mancuernas', al:'posteriores pajaros', s:3, r:12, d:60},
+  {id:'d-vuelos-posteriores-en-polea', n:'Vuelos posteriores en polea', p:'Vuelos posteriores en polea', g:'superior', m:'hombros', mm:'Deltoides posterior', eq:'Polea', al:'posteriores cruce invertido', s:3, r:12, d:60},
+  {id:'d-face-pull-en-polea', n:'Face pull en polea', p:'Face pull en polea', g:'superior', m:'hombros', mm:'Deltoides posterior', eq:'Polea', al:'polea a la cara face pull', s:3, r:15, d:60},
+  {id:'d-remo-al-menton-con-barra', n:'Remo al ment&oacute;n con barra', p:'Remo al menton con barra', g:'superior', m:'hombros', mm:'Deltoides lateral', eq:'Barra', al:'remo parado remo al menton', s:3, r:12, d:60},
+  {id:'d-remo-al-menton-en-polea', n:'Remo al ment&oacute;n en polea', p:'Remo al menton en polea', g:'superior', m:'hombros', mm:'Deltoides lateral', eq:'Polea', al:'remo parado remo al menton', s:3, r:12, d:60},
+  {id:'d-rotacion-externa-en-polea', n:'Rotaci&oacute;n externa en polea', p:'Rotacion externa en polea', g:'superior', m:'hombros', mm:'Manguito rotador', eq:'Polea', al:'manguito rotador rotacion', s:3, r:15, d:45},
+  {id:'d-curl-de-biceps-con-barra', n:'Curl de b&iacute;ceps con barra', p:'Curl de biceps con barra', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Barra', al:'curl barra', s:3, r:10, d:60},
+  {id:'d-curl-de-biceps-con-barra-z', n:'Curl de b&iacute;ceps con barra Z', p:'Curl de biceps con barra Z', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Barra Z', al:'curl barra z', s:3, r:10, d:60},
+  {id:'d-curl-de-biceps-con-mancuernas', n:'Curl de b&iacute;ceps con mancuernas', p:'Curl de biceps con mancuernas', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Mancuernas', al:'curl simultaneo mancuernas', s:3, r:10, d:60},
+  {id:'d-curl-de-biceps-en-polea-baja', n:'Curl de b&iacute;ceps en polea baja', p:'Curl de biceps en polea baja', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Polea', al:'curl polea', s:3, r:12, d:60},
+  {id:'d-curl-de-biceps-en-polea-alta', n:'Curl de b&iacute;ceps en polea alta', p:'Curl de biceps en polea alta', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Polea', al:'doble biceps polea alta', s:3, r:12, d:60},
+  {id:'d-curl-predicador-con-barra-z', n:'Curl predicador con barra Z', p:'Curl predicador con barra Z', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Barra Z', al:'banco scott predicador', s:3, r:10, d:60},
+  {id:'d-curl-predicador-en-maquina', n:'Curl predicador en m&aacute;quina', p:'Curl predicador en maquina', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'M&aacute;quina', al:'scott maquina predicador', s:3, r:12, d:60},
+  {id:'d-curl-concentrado', n:'Curl concentrado', p:'Curl concentrado', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Mancuernas', al:'concentrado', s:3, r:12, d:60},
+  {id:'d-curl-en-banco-inclinado-con-mancuernas', n:'Curl en banco inclinado con mancuernas', p:'Curl en banco inclinado con mancuernas', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Mancuernas', al:'curl inclinado', s:3, r:10, d:60},
+  {id:'d-curl-arana', n:'Curl ara&ntilde;a', p:'Curl arana', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Barra Z', al:'curl arana spider', s:3, r:10, d:60},
+  {id:'d-curl-martillo-en-polea-con-soga', n:'Curl martillo en polea con soga', p:'Curl martillo en polea con soga', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Polea', al:'martillo soga cuerda', s:3, r:12, d:60},
+  {id:'d-curl-zottman', n:'Curl Zottman', p:'Curl Zottman', g:'superior', m:'biceps', mm:'B&iacute;ceps', eq:'Mancuernas', al:'zottman', s:3, r:10, d:60},
+  {id:'d-curl-invertido-con-barra', n:'Curl invertido con barra', p:'Curl invertido con barra', g:'superior', m:'biceps', mm:'Antebrazo', eq:'Barra', al:'curl prono antebrazo', s:3, r:12, d:60},
+  {id:'d-curl-de-muneca-con-barra', n:'Curl de mu&ntilde;eca con barra', p:'Curl de muneca con barra', g:'superior', m:'biceps', mm:'Antebrazo', eq:'Barra', al:'muneca antebrazo', s:3, r:15, d:45},
+  {id:'d-extension-de-triceps-en-polea-con-barra', n:'Extensi&oacute;n de tr&iacute;ceps en polea con barra', p:'Extension de triceps en polea con barra', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Polea', al:'triceps polea pushdown barra', s:3, r:12, d:60},
+  {id:'d-extension-de-triceps-en-polea-con-soga', n:'Extensi&oacute;n de tr&iacute;ceps en polea con soga', p:'Extension de triceps en polea con soga', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Polea', al:'triceps polea soga cuerda', s:3, r:12, d:60},
+  {id:'d-extension-de-triceps-en-polea-agarre-inv', n:'Extensi&oacute;n de tr&iacute;ceps en polea agarre invertido', p:'Extension de triceps en polea agarre invertido', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Polea', al:'triceps polea supino', s:3, r:12, d:60},
+  {id:'d-extension-de-triceps-a-un-brazo-en-polea', n:'Extensi&oacute;n de tr&iacute;ceps a un brazo en polea', p:'Extension de triceps a un brazo en polea', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Polea', al:'triceps polea unilateral', s:3, r:12, d:60},
+  {id:'d-extension-de-triceps-tras-nuca-con-mancu', n:'Extensi&oacute;n de tr&iacute;ceps tras nuca con mancuerna', p:'Extension de triceps tras nuca con mancuerna', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Mancuernas', al:'copa nuca triceps', s:3, r:10, d:60},
+  {id:'d-extension-de-triceps-tras-nuca-en-polea', n:'Extensi&oacute;n de tr&iacute;ceps tras nuca en polea', p:'Extension de triceps tras nuca en polea', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Polea', al:'nuca polea soga triceps', s:3, r:12, d:60},
+  {id:'d-patada-de-triceps-con-mancuerna', n:'Patada de tr&iacute;ceps con mancuerna', p:'Patada de triceps con mancuerna', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Mancuernas', al:'patada kickback triceps', s:3, r:12, d:60},
+  {id:'d-press-frances-con-mancuernas', n:'Press franc&eacute;s con mancuernas', p:'Press frances con mancuernas', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Mancuernas', al:'frances rompecraneos triceps', s:3, r:10, d:60},
+  {id:'d-press-de-banca-agarre-cerrado', n:'Press de banca agarre cerrado', p:'Press de banca agarre cerrado', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Barra', al:'press cerrado triceps', s:3, r:10, d:90},
+  {id:'d-fondos-en-paralelas-para-triceps', n:'Fondos en paralelas para tr&iacute;ceps', p:'Fondos en paralelas para triceps', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Peso corporal', al:'paralelas dips triceps', s:3, r:10, d:90},
+  {id:'d-extension-de-triceps-en-maquina', n:'Extensi&oacute;n de tr&iacute;ceps en m&aacute;quina', p:'Extension de triceps en maquina', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'M&aacute;quina', al:'triceps maquina', s:3, r:12, d:60},
+  {id:'d-flexiones-diamante', n:'Flexiones diamante', p:'Flexiones diamante', g:'superior', m:'triceps', mm:'Tr&iacute;ceps', eq:'Peso corporal', al:'flexiones cerradas triceps', s:3, r:10, d:60},
+  {id:'d-sentadilla-con-barra', n:'Sentadilla con barra', p:'Sentadilla con barra', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Barra', al:'sentadilla libre squat', s:4, r:10, d:150},
+  {id:'d-sentadilla-frontal-con-barra', n:'Sentadilla frontal con barra', p:'Sentadilla frontal con barra', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Barra', al:'sentadilla frontal', s:3, r:8, d:150},
+  {id:'d-sentadilla-goblet', n:'Sentadilla goblet', p:'Sentadilla goblet', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Mancuernas', al:'sentadilla copa goblet', s:3, r:12, d:90},
+  {id:'d-sentadilla-bulgara', n:'Sentadilla b&uacute;lgara', p:'Sentadilla bulgara', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Mancuernas', al:'bulgara split squat', s:3, r:10, d:90},
+  {id:'d-sentadilla-con-peso-corporal', n:'Sentadilla con peso corporal', p:'Sentadilla con peso corporal', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Peso corporal', al:'sentadilla sin peso', s:3, r:15, d:60},
+  {id:'d-sentadilla-hack-en-maquina', n:'Sentadilla hack en m&aacute;quina', p:'Sentadilla hack en maquina', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'M&aacute;quina', al:'hack squat jaca', s:3, r:10, d:150},
+  {id:'d-sentadilla-pendulo', n:'Sentadilla p&eacute;ndulo', p:'Sentadilla pendulo', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'M&aacute;quina', al:'pendulo maquina sentadilla', s:3, r:10, d:150},
+  {id:'d-prensa-de-piernas-horizontal', n:'Prensa de piernas horizontal', p:'Prensa de piernas horizontal', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'M&aacute;quina', al:'prensa sentado prensa', s:3, r:12, d:150},
+  {id:'d-estocadas-con-mancuernas', n:'Estocadas con mancuernas', p:'Estocadas con mancuernas', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Mancuernas', al:'zancadas estocadas lunge', s:3, r:10, d:90},
+  {id:'d-estocadas-caminando', n:'Estocadas caminando', p:'Estocadas caminando', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Mancuernas', al:'zancadas caminando estocadas', s:3, r:12, d:90},
+  {id:'d-estocadas-en-multipower', n:'Estocadas en multipower', p:'Estocadas en multipower', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Multipower', al:'zancadas smith estocadas', s:3, r:10, d:90},
+  {id:'d-subida-al-cajon-con-mancuernas', n:'Subida al caj&oacute;n con mancuernas', p:'Subida al cajon con mancuernas', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Mancuernas', al:'step up cajon', s:3, r:10, d:90},
+  {id:'d-salto-al-cajon', n:'Salto al caj&oacute;n', p:'Salto al cajon', g:'inferior', m:'piernas', mm:'Cu&aacute;driceps', eq:'Peso corporal', al:'box jump cajon', s:3, r:8, d:90},
+  {id:'d-curl-femoral-sentado', n:'Curl femoral sentado', p:'Curl femoral sentado', g:'inferior', m:'piernas', mm:'Femorales', eq:'M&aacute;quina', al:'camilla sentado femorales', s:3, r:12, d:90},
+  {id:'d-curl-femoral-de-pie-a-una-pierna', n:'Curl femoral de pie a una pierna', p:'Curl femoral de pie a una pierna', g:'inferior', m:'piernas', mm:'Femorales', eq:'M&aacute;quina', al:'femoral parado femorales', s:3, r:12, d:60},
+  {id:'d-curl-nordico', n:'Curl n&oacute;rdico', p:'Curl nordico', g:'inferior', m:'piernas', mm:'Femorales', eq:'Peso corporal', al:'nordico femorales', s:3, r:6, d:120},
+  {id:'d-peso-muerto-rumano-con-barra', n:'Peso muerto rumano con barra', p:'Peso muerto rumano con barra', g:'inferior', m:'piernas', mm:'Femorales', eq:'Barra', al:'rumano rdl', s:3, r:10, d:120},
+  {id:'d-peso-muerto-con-piernas-rigidas', n:'Peso muerto con piernas r&iacute;gidas', p:'Peso muerto con piernas rigidas', g:'inferior', m:'piernas', mm:'Femorales', eq:'Barra', al:'piernas rigidas stiff', s:3, r:10, d:120},
+  {id:'d-buenos-dias-con-barra', n:'Buenos d&iacute;as con barra', p:'Buenos dias con barra', g:'inferior', m:'piernas', mm:'Femorales', eq:'Barra', al:'good morning buenos dias', s:3, r:10, d:90},
+  {id:'d-pantorrillas-de-pie-en-maquina', n:'Pantorrillas de pie en m&aacute;quina', p:'Pantorrillas de pie en maquina', g:'inferior', m:'piernas', mm:'Gemelos', eq:'M&aacute;quina', al:'gemelos pantorrillas', s:4, r:15, d:45},
+  {id:'d-pantorrillas-sentado-en-maquina', n:'Pantorrillas sentado en m&aacute;quina', p:'Pantorrillas sentado en maquina', g:'inferior', m:'piernas', mm:'Gemelos', eq:'M&aacute;quina', al:'gemelos soleo pantorrillas', s:4, r:15, d:45},
+  {id:'d-pantorrillas-en-prensa', n:'Pantorrillas en prensa', p:'Pantorrillas en prensa', g:'inferior', m:'piernas', mm:'Gemelos', eq:'M&aacute;quina', al:'gemelos prensa pantorrillas', s:4, r:15, d:45},
+  {id:'d-pantorrillas-en-multipower', n:'Pantorrillas en multipower', p:'Pantorrillas en multipower', g:'inferior', m:'piernas', mm:'Gemelos', eq:'Multipower', al:'gemelos smith pantorrillas', s:4, r:15, d:45},
+  {id:'d-aductores-en-maquina', n:'Aductores en m&aacute;quina', p:'Aductores en maquina', g:'inferior', m:'piernas', mm:'Aductores', eq:'M&aacute;quina', al:'aductora aductores', s:3, r:15, d:60},
+  {id:'d-sentadilla-sumo-con-mancuerna', n:'Sentadilla sumo con mancuerna', p:'Sentadilla sumo con mancuerna', g:'inferior', m:'piernas', mm:'Aductores', eq:'Mancuernas', al:'sumo aductores', s:3, r:12, d:90},
+  {id:'d-hip-thrust-en-maquina', n:'Hip thrust en m&aacute;quina', p:'Hip thrust en maquina', g:'inferior', m:'gluteos', mm:'Gl&uacute;teos', eq:'M&aacute;quina', al:'puente de gluteos maquina', s:3, r:12, d:120},
+  {id:'d-puente-de-gluteos-con-peso-corporal', n:'Puente de gl&uacute;teos con peso corporal', p:'Puente de gluteos con peso corporal', g:'inferior', m:'gluteos', mm:'Gl&uacute;teos', eq:'Peso corporal', al:'puente gluteos', s:3, r:15, d:60},
+  {id:'d-patada-de-gluteo-en-polea', n:'Patada de gl&uacute;teo en polea', p:'Patada de gluteo en polea', g:'inferior', m:'gluteos', mm:'Gl&uacute;teos', eq:'Polea', al:'patada gluteo kickback tobillera', s:3, r:12, d:60},
+  {id:'d-patada-de-gluteo-en-maquina', n:'Patada de gl&uacute;teo en m&aacute;quina', p:'Patada de gluteo en maquina', g:'inferior', m:'gluteos', mm:'Gl&uacute;teos', eq:'M&aacute;quina', al:'patada gluteo maquina', s:3, r:12, d:60},
+  {id:'d-patada-de-gluteo-en-cuadrupedia', n:'Patada de gl&uacute;teo en cuadrupedia', p:'Patada de gluteo en cuadrupedia', g:'inferior', m:'gluteos', mm:'Gl&uacute;teos', eq:'Peso corporal', al:'patada gluteo tobilleras cuatro apoyos', s:3, r:15, d:45},
+  {id:'d-abductores-en-maquina', n:'Abductores en m&aacute;quina', p:'Abductores en maquina', g:'inferior', m:'gluteos', mm:'Abductores', eq:'M&aacute;quina', al:'abductora abductores', s:3, r:15, d:60},
+  {id:'d-abduccion-con-banda', n:'Abducci&oacute;n con banda', p:'Abduccion con banda', g:'inferior', m:'gluteos', mm:'Abductores', eq:'Banda', al:'banda abductores monster walk', s:3, r:15, d:45},
+  {id:'d-plancha', n:'Plancha', p:'Plancha', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'plancha abdominal isometrico segundos', s:3, r:30, d:45},
+  {id:'d-plancha-lateral', n:'Plancha lateral', p:'Plancha lateral', g:'medio', m:'core', mm:'Oblicuos', eq:'Peso corporal', al:'plancha lateral segundos', s:3, r:30, d:45},
+  {id:'d-crunch-abdominal', n:'Crunch abdominal', p:'Crunch abdominal', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'abdominales cortos crunch', s:3, r:20, d:45},
+  {id:'d-crunch-inverso', n:'Crunch inverso', p:'Crunch inverso', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'abdominal inverso', s:3, r:15, d:45},
+  {id:'d-crunch-en-polea-alta-de-rodillas', n:'Crunch en polea alta de rodillas', p:'Crunch en polea alta de rodillas', g:'medio', m:'core', mm:'Abdominales', eq:'Polea', al:'abdominal polea crunch polea', s:3, r:15, d:45},
+  {id:'d-crunch-en-maquina', n:'Crunch en m&aacute;quina', p:'Crunch en maquina', g:'medio', m:'core', mm:'Abdominales', eq:'M&aacute;quina', al:'abdominales maquina', s:3, r:15, d:45},
+  {id:'d-abdominal-en-banco-declinado', n:'Abdominal en banco declinado', p:'Abdominal en banco declinado', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'declinado abdominales', s:3, r:15, d:45},
+  {id:'d-elevacion-de-piernas-acostado', n:'Elevaci&oacute;n de piernas acostado', p:'Elevacion de piernas acostado', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'elevaciones de piernas abdominales', s:3, r:15, d:45},
+  {id:'d-elevacion-de-piernas-colgado', n:'Elevaci&oacute;n de piernas colgado', p:'Elevacion de piernas colgado', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'colgado barra fija abdominales', s:3, r:12, d:45},
+  {id:'d-rueda-abdominal', n:'Rueda abdominal', p:'Rueda abdominal', g:'medio', m:'core', mm:'Abdominales', eq:'Otro', al:'rueda rodillo abdominales', s:3, r:10, d:60},
+  {id:'d-abdominal-v', n:'Abdominal V', p:'Abdominal V', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'v up abdominales', s:3, r:12, d:45},
+  {id:'d-escaladores', n:'Escaladores', p:'Escaladores', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'mountain climbers', s:3, r:20, d:45},
+  {id:'d-dead-bug', n:'Dead bug', p:'Dead bug', g:'medio', m:'core', mm:'Abdominales', eq:'Peso corporal', al:'bicho muerto', s:3, r:12, d:45},
+  {id:'d-giros-rusos-con-disco', n:'Giros rusos con disco', p:'Giros rusos con disco', g:'medio', m:'core', mm:'Oblicuos', eq:'Disco', al:'russian twist giros', s:3, r:20, d:45},
+  {id:'d-bicicleta-abdominal', n:'Bicicleta abdominal', p:'Bicicleta abdominal', g:'medio', m:'core', mm:'Oblicuos', eq:'Peso corporal', al:'bicicleta abdominales', s:3, r:20, d:45},
+  {id:'d-toques-de-talon', n:'Toques de tal&oacute;n', p:'Toques de talon', g:'medio', m:'core', mm:'Oblicuos', eq:'Peso corporal', al:'heel touch oblicuos', s:3, r:20, d:45},
+  {id:'d-lenador-en-polea', n:'Le&ntilde;ador en polea', p:'Lenador en polea', g:'medio', m:'core', mm:'Oblicuos', eq:'Polea', al:'lenador woodchopper', s:3, r:12, d:45},
+  {id:'d-pallof-press-en-polea', n:'Pallof press en polea', p:'Pallof press en polea', g:'medio', m:'core', mm:'Oblicuos', eq:'Polea', al:'pallof antirotacion', s:3, r:12, d:45},
+  {id:'d-hiperextensiones-en-banco', n:'Hiperextensiones en banco', p:'Hiperextensiones en banco', g:'medio', m:'core', mm:'Lumbar', eq:'M&aacute;quina', al:'lumbares banco romano espinales', s:3, r:12, d:60},
+  {id:'d-superman', n:'Superman', p:'Superman', g:'medio', m:'core', mm:'Lumbar', eq:'Peso corporal', al:'espinales lumbares', s:3, r:12, d:45}
+];
+/* los 25 que ya existian: mismo ID, se les suma musculo especifico y alias */
+var CATALOGO_EXTRA = {
+  a0:{mm:'Cu&aacute;driceps', al:'smith hack sentadilla'},
+  a1:{mm:'Dorsal', al:'jalon polea al pecho dorsalera'},
+  a2:{mm:'Espalda media', al:'remo sentado remo polea'},
+  a3:{mm:'Dorsal', al:'dorsal hammer unilateral'},
+  b5:{mm:'Deltoides lateral', al:'laterales elevaciones laterales'},
+  a5:{mm:'B&iacute;ceps', al:'curl alternado'},
+  a6:{mm:'B&iacute;ceps', al:'martillo hammer curl'},
+  a7:{mm:'Abdominales', al:'crunch con disco'},
+  a8:{mm:'Oblicuos', al:'oblicuos'},
+  a9:{mm:'Abdominales', al:'silla romana paralelas elevacion de rodillas'},
+  c3:{mm:'Pecho inferior', al:'declinado smith'},
+  a4:{mm:'Deltoides posterior', al:'posteriores pec deck invertido'},
+  b0:{mm:'Cu&aacute;driceps', al:'prensa 45 prensa inclinada'},
+  b1:{mm:'Femorales', al:'camilla de femorales curl femoral acostado'},
+  b2:{mm:'Cu&aacute;driceps', al:'sillon de cuadriceps extensiones cuadriceps'},
+  b3:{mm:'Gl&uacute;teos', al:'hip thrust puente con barra'},
+  b4:{mm:'Deltoides anterior', al:'press de hombros hammer'},
+  b6:{mm:'Deltoides anterior', al:'frontales con disco'},
+  c0:{mm:'Femorales', al:'rumano rdl'},
+  c1:{mm:'Pecho', al:'press de pecho maquina hammer plano'},
+  c2:{mm:'Pecho', al:'pec deck mariposa peck deck'},
+  c4:{mm:'Tr&iacute;ceps', al:'fondos en banco'},
+  c5:{mm:'Tr&iacute;ceps', al:'rompecraneos frances'},
+  c6:{mm:'Abdominales', al:''},
+  c7:{mm:'Lumbar', al:'lumbares superman'}
+};
+CATALOGO = CATALOGO.concat(DICCIONARIO);
+RUTINA_BASE.concat(CATALOGO).forEach(function(e){
+  var x = CATALOGO_EXTRA[e.id];
+  if(x){ e.mm = x.mm; e.al = x.al; }
+});
 
 /* Musculos, con el tren al que pertenecen. El orden es el que se muestra. */
 var MUSCULOS = {
@@ -796,7 +981,7 @@ function isoOf(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getD
 function weekKey(iso){ return isoOf(monday(parseISO(iso))); }
 function monthKey(iso){ return String(iso).slice(0,7); }
 
-function slug(s){
+function slug(s, sinCorte){
   /* pasa a minusculas, saca acentos y deja solo a-z 0-9 separados por guiones.
      Hecho a mano char por char para no meter acentos ni escapes en el archivo. */
   var t = String(s||'').toLowerCase(), o = '';
@@ -814,7 +999,7 @@ function slug(s){
   while(o.indexOf('--')!==-1) o = o.split('--').join('-');
   if(o.charAt(0)==='-') o = o.substring(1);
   if(o.charAt(o.length-1)==='-') o = o.substring(0,o.length-1);
-  return o.substring(0,40);
+  return sinCorte ? o : o.substring(0,40);
 }
 function nf(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
 /* hasta 2 decimales: Diego carga pesos como 11,25 kg y redondear a 1 decimal
@@ -1064,6 +1249,8 @@ function statsOf(sessions){
    "curl femoral" caiga en piernas y no en biceps. Se compara contra slug() del
    nombre, que ya viene sin acentos: nunca regex sobre acentos. */
 var MUSC_PALABRAS = [
+  ['trapecio','espalda'], ['encogimiento','espalda'], ['face-pull','hombros'],
+  ['antebrazo','biceps'], ['muneca','biceps'], ['sillon','piernas'], ['camilla','piernas'],
   ['jalon','espalda'], ['press-frances','triceps'],
   ['tricep','triceps'], ['bicep','biceps'], ['gluteo','gluteos'],
   ['cuadricep','piernas'], ['femoral','piernas'], ['isquio','piernas'],
@@ -1089,6 +1276,46 @@ function muscPorNombre(nombre){
   }
   return '';
 }
+/* entrada del catalogo cuyo nombre o alias coincide exacto con un nombre libre */
+function dicPorNombre(nombre){
+  var t = slug(nombre, true);
+  if(!t) return null;
+  var todos = RUTINA_BASE.concat(CATALOGO);
+  for(var i=0;i<todos.length;i++){
+    var e = todos[i];
+    if(slug(e.p, true) === t) return e;
+  }
+  return null;
+}
+/* musculo especifico para mostrar: el del diccionario, o el grupo si no tiene */
+function muscEsp(id, it){
+  var e = exDef(id);
+  if(e && e.mm) return e.mm;
+  return MUSCULOS[muscOf(id, it)].lbl;
+}
+/* Texto donde busca el modal: nombre, alias, musculo, grupo y equipo, sin acentos.
+   Las etiquetas vienen con entidades HTML: se sacan con regex sobre las ENTIDADES
+   (ASCII), nunca sobre letras acentuadas. */
+function desent(t){
+  return String(t||'').replace(/&([a-zA-Z])(acute|uml);/g, '$1').replace(/&ntilde;/g, 'n')
+                      .replace(/&Ntilde;/g, 'N').replace(/&#39;/g, '').replace(/&[a-z]+;/g, ' ');
+}
+function buscable(e){
+  if(e._b === undefined){
+    var m = e.m || muscOf(e.id, {name:e.p, group:e.g});
+    e._b = slug([e.p, e.al||'', desent(e.mm), desent(MUSCULOS[m] ? MUSCULOS[m].lbl : ''), desent(e.eq)].join(' '), true);
+  }
+  return e._b + '-' + slug(nombrePlano(e.id, e.p), true);
+}
+function coincide(e, words){
+  var b = '-' + buscable(e) + '-';
+  for(var i=0;i<words.length;i++) if(b.indexOf(words[i]) === -1) return false;
+  return true;
+}
+function palabras(q, min){
+  return slug(q||'', true).split('-').filter(function(w){ return w.length >= (min||2); });
+}
+
 function muscLocal(){
   try{ return JSON.parse(localStorage.getItem('gym_musc') || '{}') || {}; }catch(e){ return {}; }
 }
@@ -1101,7 +1328,11 @@ function muscOf(id, it){
   if(e && e.m) return e.m;
   var ov = muscLocal()[id];
   if(ov && MUSCULOS[ov]) return ov;
-  var pn = muscPorNombre(nombrePlano(id, it && it.name));
+  var nom = nombrePlano(id, it && it.name);
+  /* un cargado a mano que se llama igual que uno del diccionario toma su musculo */
+  var dn = dicPorNombre(nom);
+  if(dn) return dn.m;
+  var pn = muscPorNombre(nom);
   if(pn) return pn;
   var g = (it && it.group) || (e && e.g) || 'superior';
   return g==='medio' ? 'core' : (g==='inferior' ? 'piernas' : 'espalda');
@@ -1693,7 +1924,7 @@ function buildTrain(){
       h += '<div class="ex-det">';
 
       h +=   '<div class="ex-sub">';
-      h +=     '<span class="gpill '+st.group+'">'+GRUPOS[st.group].lbl+'</span>';
+      h +=     '<span class="gpill '+st.group+'">'+muscEsp(id, st)+'</span>';
       h +=     '<div class="ex-acts">'+
                '<button class="iconbtn" onclick="openRenombrar(\''+id+'\')" title="Renombrar">'+
                '<svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>'+
@@ -2001,6 +2232,7 @@ function loadDraft(){
 function openAdd(){
   newGroup='superior';
   newEx = {name:'', w:'', s:'3', r:'12'};
+  addMusc = '';
   renderAdd('');
   openModal();
 }
@@ -2020,31 +2252,51 @@ function closeModal(){
   window.scrollTo(0, _scrollY);
 }
 
+/* ---- Agregar ejercicio (v15) ----
+   Con el diccionario son ~160 ejercicios: se filtran por musculo (pills) y se buscan por
+   nombre, alias, musculo o equipo. Buscar "polea triceps" exige las dos palabras. */
+var addMusc = '';   // '' = sugeridos
+
+function catItemHTML(e, m){
+  var det = [e.mm || MUSCULOS[m].lbl];
+  if(e.eq) det.push(e.eq);
+  return '<button class="catitem" onclick="addFromCat(\''+e.id+'\')">'+
+         '<span class="hdot '+e.g+'"></span>'+
+         '<span class="cn">'+dispName(e.id, e.p)+'<span class="cdet">'+det.join(' &middot; ')+'</span></span>'+
+         '<span class="cs">'+e.s+'x'+e.r+'</span></button>';
+}
+
 function renderAdd(q){
   var known = allKnown();
-  var term = slug(q);
+  var words = palabras(q);
+  var prio = {};
+  muscleGaps().forEach(function(gp, i){ prio[gp.m] = i; });
+
   var list = [];
   for(var id in known){
     if(draftOrder.indexOf(id)!==-1) continue;          // ya esta en la sesion
     var e = known[id];
-    if(term && slug(e.p).indexOf(term)===-1) continue;
-    list.push(e);
+    var em = e.m || muscOf(id, {name:e.p, group:e.g});
+    if(addMusc && em !== addMusc) continue;
+    if(words.length && !coincide(e, words)) continue;
+    list.push({e:e, m:em});
   }
-  /* el catalogo se ordena por musculo mas descuidado primero, y alfabetico dentro de cada uno */
-  var prio = {};
-  muscleGaps().forEach(function(gp, i){ prio[gp.m] = i; });
+  /* sin filtro: musculo mas descuidado primero. Filtrando por musculo: alfabetico */
   list.sort(function(a,b){
-    var pa = prio[a.m] === undefined ? 99 : prio[a.m];
-    var pb = prio[b.m] === undefined ? 99 : prio[b.m];
-    if(pa !== pb) return pa - pb;
-    return a.p<b.p ? -1 : 1;
+    if(!addMusc){
+      var pa = prio[a.m] === undefined ? 99 : prio[a.m];
+      var pb = prio[b.m] === undefined ? 99 : prio[b.m];
+      if(pa !== pb) return pa - pb;
+    }
+    var na = slug(nombrePlano(a.e.id, a.e.p), true), nb = slug(nombrePlano(b.e.id, b.e.p), true);
+    return na < nb ? -1 : (na > nb ? 1 : 0);
   });
 
   var h='';
   h += '<div class="mttl"><h3>Agregar ejercicio</h3><button class="mx" onclick="closeModal()">&#10005;</button></div>';
 
   /* --- sugerencias para compensar lo que viene flojo --- */
-  if(!term){
+  if(!words.length && !addMusc){
     var gaps = muscleGaps().filter(function(x){ return x.falta > 0 || x.dias === null || x.dias >= 7; });
     var sug = [];
     gaps.forEach(function(gp){
@@ -2052,7 +2304,6 @@ function renderAdd(q){
       var yaHay = false;
       draftOrder.forEach(function(id){ if(muscOf(id, draft[id]) === gp.m) yaHay = true; });
       if(yaHay) return;
-      /* del catalogo completo, el primero de ese musculo que no este en la sesion */
       for(var id in known){
         if(sug.length >= 3) break;
         if(draftOrder.indexOf(id) !== -1) continue;
@@ -2072,7 +2323,7 @@ function renderAdd(q){
                                       : x.gap.sem + '/' + SERIES_MIN + ' series esta semana');
         h += '<button class="catitem sug-item" onclick="addFromCat(\''+x.e.id+'\')">'+
              '<span class="hdot '+x.e.g+'"></span>'+
-             '<span class="cn">'+x.e.n+'<br><span class="cs" style="color:var(--green-2)">'+
+             '<span class="cn">'+dispName(x.e.id, x.e.p)+'<br><span class="cs" style="color:var(--green-2)">'+
              MUSCULOS[x.gap.m].lbl+' &middot; '+motivo+'</span></span>'+
              '<span class="cs">'+x.e.s+'x'+x.e.r+'</span></button>';
       });
@@ -2080,26 +2331,34 @@ function renderAdd(q){
     }
   }
 
-  h += '<input type="text" id="add-q" placeholder="Buscar..." value="'+esc(q)+'" oninput="renderAdd(this.value)" style="margin-bottom:12px">';
+  h += '<input type="text" id="add-q" placeholder="Buscar: polea, tr&iacute;ceps, mancuernas..." value="'+esc(q)+'" oninput="renderAdd(this.value)" style="margin-bottom:10px">';
 
+  h += '<div class="muscbar">';
+  h += '<button class="mpill'+(addMusc===''?' on':'')+'" onclick="setAddMusc(\'\')">Sugeridos</button>';
+  MORDER.forEach(function(m){
+    h += '<button class="mpill'+(addMusc===m?' on':'')+'" onclick="setAddMusc(\''+m+'\')">'+MUSCULOS[m].lbl+'</button>';
+  });
+  h += '</div>';
+
+  var tope = (words.length || addMusc) ? 400 : 40;
   h += '<div class="catlist">';
   if(!list.length){
     h += '<div class="empty" style="padding:18px">Sin resultados. Cargalo a mano abajo.</div>';
   } else {
-    list.slice(0,40).forEach(function(e){
-      h += '<button class="catitem" onclick="addFromCat(\''+e.id+'\')">'+
-           '<span class="hdot '+e.g+'"></span>'+
-           '<span class="cn">'+e.n+'</span>'+
-           '<span class="cs">'+e.s+'x'+e.r+'</span></button>';
-    });
+    list.slice(0, tope).forEach(function(x){ h += catItemHTML(x.e, x.m); });
   }
   h += '</div>';
+  if(list.length > tope){
+    h += '<div class="hint" style="margin:2px 0 4px;font-size:.76rem">Mostrando '+tope+' de '+list.length+
+         '. Eleg&iacute; un m&uacute;sculo o busc&aacute; para ver el resto.</div>';
+  }
 
   h += '<div class="mdiv"><span>o cargalo a mano</span></div>';
   /* los valores salen de newEx, no del DOM: renderAdd corre en cada tecla del buscador
      y antes eso borraba lo que el usuario ya habia cargado a mano */
   h += '<div style="margin-bottom:12px"><div class="fl kick" style="margin-bottom:5px">Nombre del ejercicio o m&aacute;quina</div>'+
-       '<input type="text" id="add-name" placeholder="Ej: Prensa 45 Nautilus" value="'+esc(newEx.name)+'" oninput="newEx.name=this.value"></div>';
+       '<input type="text" id="add-name" placeholder="Ej: Prensa 45 Nautilus" value="'+esc(newEx.name)+'" '+
+       'oninput="newEx.name=this.value;pintarCoincidencias()"><div id="add-match"></div></div>';
   h += '<div class="fl kick" style="margin-bottom:6px">Tren</div><div class="grow">';
   GORDER.forEach(function(g){
     h += '<button class="gbtn tren-btn'+(newGroup===g?' on':'')+'" data-g="'+g+'" onclick="setNewGroup(\''+g+'\')">'+GRUPOS[g].lbl+'</button>';
@@ -2113,8 +2372,51 @@ function renderAdd(q){
   h += '<button class="btn btn-p btn-full" onclick="addCustom()">Agregar a la sesi&oacute;n</button>';
 
   $('modal-box').innerHTML = h;
+  pintarCoincidencias();
   var qi=$('add-q');
   if(qi && q){ qi.focus(); qi.setSelectionRange(qi.value.length,qi.value.length); }
+}
+
+function setAddMusc(m){
+  addMusc = m;
+  var qi = $('add-q');
+  renderAdd(qi ? qi.value : '');
+  var cl = document.querySelector('#modal-box .catlist');
+  if(cl) cl.scrollTop = 0;
+}
+
+/* Mientras se escribe un nombre a mano: si ya esta en el diccionario lo ofrece (asi entra
+   con musculo, series y descanso), y si no, avisa como lo va a contar la app.
+   Solo toca #add-match: re-renderizar el formulario bajaria el teclado. */
+function musculoNuevo(nombre){
+  var dn = dicPorNombre(nombre);
+  if(dn) return {m:dn.m, como:'diccionario'};
+  var pn = muscPorNombre(nombre);
+  if(pn) return {m:pn, como:'nombre'};
+  return {m: newGroup==='medio' ? 'core' : (newGroup==='inferior' ? 'piernas' : 'espalda'), como:'tren'};
+}
+function pintarCoincidencias(){
+  var box = $('add-match');
+  if(!box) return;
+  var nombre = (newEx.name||'').trim();
+  var words = palabras(nombre, 3);
+  if(!words.length){ box.innerHTML = ''; return; }
+  var known = allKnown(), hits = [];
+  for(var id in known){
+    if(hits.length >= 3) break;
+    if(draftOrder.indexOf(id) !== -1) continue;
+    if(coincide(known[id], words)) hits.push(known[id]);
+  }
+  var h = '';
+  if(hits.length){
+    h += '<div class="matchbox"><div class="kick" style="margin-bottom:5px;color:var(--violet-2)">&iquest;Es alguno de estos?</div>';
+    hits.forEach(function(e){ h += catItemHTML(e, e.m || muscOf(e.id, {name:e.p, group:e.g})); });
+    h += '</div>';
+  }
+  var mn = musculoNuevo(nombre);
+  h += '<div class="hint" style="margin-top:7px;font-size:.78rem">Si lo carg&aacute;s a mano, cuenta como <b>'+
+       MUSCULOS[mn.m].lbl+'</b>'+(mn.como==='tren' ? ' (por el tren elegido: cambialo abajo si no es)' : '')+'.</div>';
+  box.innerHTML = h;
 }
 
 /* solo cambia clases: re-renderizar aca borraba el nombre y los kg ya cargados */
@@ -2122,6 +2424,7 @@ function setNewGroup(g){
   newGroup=g;
   var bs=document.querySelectorAll('#modal-box .tren-btn');
   for(var i=0;i<bs.length;i++) bs[i].classList.toggle('on', bs[i].dataset.g===g);
+  pintarCoincidencias();   /* el tren cambia el musculo que se deduce */
 }
 
 function addFromCat(id){

@@ -661,7 +661,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v13';
+var APP_VER   = 'v14';
 
 /* ==================================================================
    EJERCICIOS
@@ -3090,6 +3090,29 @@ function corridas(){
   });
 }
 
+/* Las corridas agrupadas por dia. Diego casi siempre sale dos veces (una corta y una
+   larga): una barra por corrida eran 14 barras, el eje salteaba la mitad de las fechas
+   y la corrida del dia quedaba sin etiqueta. Por dia son la mitad y cada una lleva fecha.
+   larga = la mas larga del dia (es la unica que puede ser record: supera a todo lo
+   anterior, incluida la corta de ese mismo dia). resto = la suma de las otras. */
+function diasCorrida(){
+  var map = {}, orden = [];
+  corridas().forEach(function(x){
+    var d = x.c.date;
+    if(!map[d]){ map[d] = {date:d, runs:[], larga:0, total:0, pr:false}; orden.push(d); }
+    var o = map[d];
+    o.runs.push(x);
+    o.total += x.km;
+    if(x.km > o.larga) o.larga = x.km;
+    if(x.pr) o.pr = true;
+  });
+  return orden.map(function(d){
+    var o = map[d];
+    o.resto = Math.max(0, o.total - o.larga);
+    return o;
+  });
+}
+
 function cardioProgHTML(){
   var cs = corridas();
   if(!cs.length) return '';
@@ -3107,8 +3130,10 @@ function cardioProgHTML(){
        (nf(rec.c.dur) ? ' &middot; '+fDur(rec.c.dur) : '')+
        (rt ? ' &middot; '+fRitmo(rt)+' /km' : '')+'</div>';
   h += '<div class="chartbox" style="height:170px;margin-top:16px"><canvas id="cv-cardio"></canvas></div>';
-  h += '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
-       'distancia por corrida &middot; en verde, las que fueron r&eacute;cord</span></div>';
+  h += '<div style="text-align:center;margin-top:10px;line-height:1.7"><span class="kick" style="color:var(--dim)">'+
+       'km por d&iacute;a &middot; <span style="color:var(--green-2)">r&eacute;cord</span> &middot; '+
+       '<span style="color:var(--violet-2)">&uacute;ltimo d&iacute;a</span> &middot; '+
+       'arriba, las salidas cortas</span></div>';
   h += '</div>';
   return h;
 }
@@ -3165,32 +3190,51 @@ function drawProgCharts(){
     });
   }
 
-  /* cardio: una barra por corrida, las que fueron record en verde. La progresion
-     se lee de un vistazo sin leer un solo numero. */
+  /* cardio: una barra por dia, apilada. Abajo la corrida larga (verde si fue record,
+     violeta si es el ultimo dia, gris si no); arriba, en tenue, las salidas cortas.
+     El segmento de abajo coincide con el numero del record, asi que el 3,95 grande
+     y la barra verde dicen lo mismo. */
   var cc = $('cv-cardio');
   if(cc){
     if(charts.cardio){ charts.cardio.destroy(); charts.cardio=null; }
-    var cs = corridas().slice(-14);
+    var ds = diasCorrida().slice(-10);
+    var ultimo = ds.length ? ds[ds.length-1].date : '';
     charts.cardio = new Chart(cc.getContext('2d'), {
       type:'bar',
       data:{
-        labels: cs.map(function(x){ return fShort(x.c.date); }),
-        datasets:[{
-          data: cs.map(function(x){ return Math.round(x.km*100)/100; }),
-          backgroundColor: cs.map(function(x){ return x.pr ? '#2BE08A' : '#3A3A4A'; }),
-          borderRadius:4, borderSkipped:false
-        }]
+        labels: ds.map(function(o){ var d = parseISO(o.date); return d.getDate()+'/'+(d.getMonth()+1); }),
+        datasets:[
+          {label:'larga',
+           data: ds.map(function(o){ return Math.round(o.larga*100)/100; }),
+           backgroundColor: ds.map(function(o){
+             return o.pr ? '#2BE08A' : (o.date === ultimo ? '#7C5CFF' : '#3A3A4A');
+           }),
+           borderRadius:4, borderSkipped:false},
+          {label:'cortas',
+           data: ds.map(function(o){ return Math.round(o.resto*100)/100; }),
+           backgroundColor:'rgba(236,236,242,.16)',
+           borderRadius:4, borderSkipped:false}
+        ]
       },
       options:{
         responsive:true, maintainAspectRatio:false,
         plugins:{ legend:{display:false}, tooltip: Object.assign({}, TT, {
-          callbacks:{ label:function(c){
-            var x = cs[c.dataIndex];
-            return fKm(x.km)+' km'+(x.pr ? ' - record' : '');
-          } } }) },
+          filter:function(i){ return i.datasetIndex === 0; },
+          callbacks:{
+            title:function(items){ return fShort(ds[items[0].dataIndex].date); },
+            label:function(c){
+              var o = ds[c.dataIndex];
+              var l = o.runs.map(function(x){
+                return (x.c.time ? x.c.time+'  ' : '')+fKm(x.km)+' km'+(x.pr ? '  record' : '');
+              });
+              if(o.runs.length > 1) l.push('total '+fKm(o.total)+' km');
+              return l;
+            }
+          } }) },
         scales:{
-          x:{ grid:{display:false}, ticks:{color:'#5E5E70', font:{size:10}, maxRotation:0} },
-          y:{ beginAtZero:true, grid:{color:'#22222E'},
+          x:{ stacked:true, grid:{display:false},
+              ticks:{color:'#5E5E70', font:{size:10}, maxRotation:0, autoSkip:false} },
+          y:{ stacked:true, beginAtZero:true, grid:{color:'#22222E'},
               ticks:{color:'#5E5E70', font:{size:10}, callback:function(v){ return v+' km'; }} }
         }
       }

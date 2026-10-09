@@ -836,6 +836,13 @@ button.prow{width:100%;text-align:left;color:inherit;font:inherit;background:non
 .temacard .td{display:block;font-family:'Asap Condensed',sans-serif;font-size:.67rem;font-weight:600;
   letter-spacing:.04em;color:var(--dim);margin-top:2px;line-height:1.3}
 
+/* --- peso corporal (v19) --- */
+.dtr.bodyrow{grid-template-columns:1fr 1fr 1fr 16px;align-items:center;width:100%;
+  text-align:left;color:inherit;font:inherit;background:none;border-left:none;
+  border-right:none;border-top:none;transition:.15s}
+.dtr.bodyrow:hover{background:var(--surface2)}
+.dtr.bodyrow .hchev{width:14px;height:14px}
+
 #toast{position:fixed;left:50%;bottom:calc(24px + var(--safe-bot));transform:translate(-50%,100px);z-index:800;
   background:var(--surface3);border:1px solid var(--border);border-radius:11px;padding:13px 20px;
   font-size:.88rem;font-weight:500;box-shadow:var(--shadow);opacity:0;transition:.28s;max-width:88vw;
@@ -931,7 +938,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v18';
+var APP_VER   = 'v19';
 
 /* ==================================================================
    TEMA (v17)
@@ -1406,6 +1413,7 @@ var openSession = null;  // clave de la tarjeta expandida en el historial
 var cardioDraft = null;  // corrida que se esta cargando/editando en el modal
 var openEx = null;       // ejercicio expandido en Entrenar (uno a la vez)
 var ordenando = false;   // modo organizar: solo ahi se pueden arrastrar los ejercicios
+var bodyDraft = null;    // medicion de peso corporal que se esta cargando en el modal
 var openPaso = null;     // ejercicio con el selector de salto de carga desplegado
 var newEx = {name:'', w:'', s:'3', r:'12'};  // form de "cargar a mano", fuera del DOM
 var draftDirty = false;  // hay cambios sin guardar en la sesion en curso
@@ -3990,6 +3998,7 @@ function buildProg(){
   h += balanceHTML();
   h += estancadosHTML();
   h += cardioProgHTML();
+  h += corporalHTML();
 
   $('p-prog').innerHTML = h;
   if(activeTab==='prog') drawProgCharts();
@@ -4492,6 +4501,188 @@ function cardioProgHTML(){
 }
 
 /* ==================================================================
+   PESO CORPORAL (v19)
+   La pregunta que las calorias quemadas no contestan: "estoy definiendo?".
+   El gasto estimado es ruidoso y chico; el peso en el tiempo es una medicion
+   real y es lo que de verdad responde.
+
+   DONDE SE GUARDA: en PREFS, clave 'corporal'. La planilla tiene una hoja
+   CORPORAL con las columnas justas y el backend tiene una accion saveBody de
+   una version vieja, pero no hay forma de comprobar desde aca si el Apps Script
+   DEVUELVE esa hoja al leer, y sin lectura el historial no sirve. PREFS en
+   cambio ida y vuelta esta probado (por ahi viajan 'tema' y 'modoEx'). Son unas
+   50 mediciones por anio: entra de sobra en una celda.
+
+   LA CINTURA no es un extra decorativo: peso estable con cintura que baja es
+   recomposicion (ganaste musculo y perdiste grasa), y mirando solo la balanza
+   eso se lee como "no pasa nada" y desmotiva.
+   ================================================================== */
+function corporal(){
+  var l = pref('corporal', []);
+  if(!l || l.length === undefined) l = [];
+  return l.slice().sort(function(a, b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
+}
+function setCorporal(l){
+  l.sort(function(a, b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
+  return setPref('corporal', l);
+}
+/* El peso de un dia puntual depende de cuanta agua y sal tenes encima y se mueve
+   un kilo de un dia para el otro: leer la balanza cruda lleva a conclusiones
+   falsas. Esta es la linea que decide.
+
+   La ventana se ADAPTA a cada cuanto te pesas, y eso no es un adorno: con la
+   media movil de 7 dias de toda la vida, el que se pesa una vez por semana
+   tiene una sola medicion por ventana y la "tendencia" le queda identica al
+   dato crudo, o sea no suaviza nada. Entonces: entran todas las mediciones de
+   los ultimos 10 dias, pero nunca menos de 3. Pesandote a diario promedia ~10
+   dias; pesandote por semana, las ultimas 3 semanas. */
+function suavizado(l){
+  return l.map(function(x, i){
+    var desde = new Date(parseISO(x.d)); desde.setDate(desde.getDate() - 10);
+    var ini = isoOf(desde), ac = 0, n = 0;
+    for(var k = i; k >= 0; k--){
+      if(l[k].d < ini && n >= 3) break;     /* fuera de la ventana y ya hay suficientes */
+      ac += nf(l[k].p); n++;
+    }
+    return n ? ac / n : nf(x.p);
+  });
+}
+/* el registro mas cercano a hace N dias, para comparar contra algo real y no
+   contra una fecha que no existe */
+function cercanoA(l, dias){
+  var d = new Date(); d.setDate(d.getDate() - dias);
+  var obj = isoOf(d), mejor = null, dist = 1e9;
+  l.forEach(function(x){
+    var dd = Math.abs(parseISO(x.d) - parseISO(obj));
+    if(dd < dist){ dist = dd; mejor = x; }
+  });
+  /* si lo mas parecido esta a mas de 15 dias del objetivo, no sirve de referencia */
+  return (mejor && dist <= 15*24*3600*1000) ? mejor : null;
+}
+function fPeso(v){ var n = nf(v); return n ? fKg(n) : ''; }
+function fDelta(d, u){
+  if(Math.abs(d) < 0.05) return 'igual';
+  return (d > 0 ? '+' : '&minus;') + fKg(Math.abs(d)) + ' ' + u;
+}
+
+function corporalHTML(){
+  var l = corporal();
+  var act = '<button class="ordbtn" onclick="openBody()">'+
+            '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Anotar</button>';
+  var h = secHd('Cuerpo', 'cyan', l.length ? l.length+(l.length===1?' medici&oacute;n':' mediciones') : '', act);
+
+  if(!l.length){
+    h += '<div class="card"><div class="hint">Anot&aacute; tu peso una vez por semana, siempre en las '+
+         'mismas condiciones (reci&eacute;n levantado, despu&eacute;s del ba&ntilde;o y antes de desayunar). '+
+         'Con tres o cuatro mediciones ya vas a ver la tendencia.<br><br>'+
+         'Es lo que contesta <b>&iquest;estoy definiendo?</b> mucho mejor que las calor&iacute;as quemadas.'+
+         '</div></div>';
+    return h;
+  }
+
+  var u = l[l.length-1], sm = suavizado(l);
+  h += '<div class="card">';
+  h += '<div class="kick">Tu peso hoy</div>';
+  h += '<div class="rec-v">'+fPeso(u.p)+' kg</div>';
+  h += '<div class="rec-s">'+fDate(u.d)+(nf(u.c) ? ' &middot; cintura '+fKg(u.c)+' cm' : '')+'</div>';
+
+  /* el cambio a 30 y 90 dias se compara contra la TENDENCIA, no contra el dato
+     crudo de ese dia, que pudo ser un dia hinchado */
+  var tend = {}; l.forEach(function(x, i){ tend[x.d] = sm[i]; });
+  var k30 = cercanoA(l, 30), k90 = cercanoA(l, 90);
+  if(k30 || k90){
+    h += '<div class="dkpis" style="margin:14px 0 0">';
+    [[30, k30], [90, k90]].forEach(function(par){
+      var dias = par[0], ref = par[1];
+      h += '<div class="dk"><span class="kick">'+dias+' d&iacute;as</span><b>'+
+           (ref ? fDelta(tend[u.d] - tend[ref.d], 'kg') : '&mdash;')+'</b>'+
+           '<span class="hm">'+(ref ? 'desde '+fShort(ref.d) : 'sin dato tan atr&aacute;s')+'</span></div>';
+    });
+    h += '</div>';
+  }
+
+  if(l.length > 1){
+    h += '<div class="chartbox" style="height:180px;margin-top:16px"><canvas id="cv-body"></canvas></div>';
+    h += '<div style="text-align:center;margin-top:10px"><span class="kick" style="color:var(--dim)">'+
+         'cada medici&oacute;n &middot; <span style="color:var(--cyan-2)">la tendencia</span> '+
+         '&middot; la l&iacute;nea manda, los puntos sueltos son agua</span></div>';
+  }
+
+  /* las ultimas, para corregir una mal cargada sin salir de aca */
+  h += '<div class="kick" style="margin:16px 0 6px">&Uacute;ltimas</div><div class="dtab">';
+  l.slice(-6).reverse().forEach(function(x){
+    h += '<button class="dtr bodyrow" onclick="openBody(\''+jsq(x.d)+'\')">'+
+         '<span>'+fShort(x.d)+'</span><span>'+fPeso(x.p)+' kg</span>'+
+         '<span>'+(nf(x.c) ? fKg(x.c)+' cm' : '&mdash;')+'</span>'+
+         '<svg class="hchev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button>';
+  });
+  h += '</div>';
+  h += '</div>';
+  return h;
+}
+
+/* ---- carga y edicion ---- */
+function openBody(fecha){
+  var l = corporal(), ex = null;
+  l.forEach(function(x){ if(x.d === fecha) ex = x; });
+  bodyDraft = ex ? {d:ex.d, p:String(ex.p), c:String(ex.c || ''), nuevo:false}
+                 : {d:todayISO(), p:'', c:'', nuevo:true};
+  renderBody();
+  openModal();
+}
+function setBody(k, v){ if(bodyDraft) bodyDraft[k] = (k === 'd') ? v : decIn(v); }
+function renderBody(){
+  var b = bodyDraft;
+  var h = '<div class="mttl"><h3>'+(b.nuevo ? 'Anotar medici&oacute;n' : 'Editar medici&oacute;n')+
+          '</h3><button class="mx" onclick="closeModal()">&#10005;</button></div>';
+  h += '<div class="hint" style="margin-bottom:14px">Pesate siempre igual: reci&eacute;n '+
+       'levantado, despu&eacute;s del ba&ntilde;o y antes de desayunar. Si cambi&aacute;s las condiciones, '+
+       'la comparaci&oacute;n no vale.</div>';
+  h += '<div class="f3" style="grid-template-columns:1.2fr 1fr 1fr">';
+  h += '<div><div class="fl">Fecha</div><input type="date" id="bd-date" value="'+esc(b.d)+
+       '" onchange="setBody(\'d\',this.value)"></div>';
+  h += '<div><div class="fl">Peso kg</div><input type="text" inputmode="decimal" id="bd-p" '+
+       'placeholder="&mdash;" value="'+esc(decOut(b.p))+'" oninput="setBody(\'p\',this.value)"></div>';
+  h += '<div><div class="fl">Cintura cm</div><input type="text" inputmode="decimal" id="bd-c" '+
+       'placeholder="&mdash;" value="'+esc(decOut(b.c))+'" oninput="setBody(\'c\',this.value)"></div>';
+  h += '</div>';
+  h += '<div class="hint" style="margin-bottom:16px">La <b>cintura</b> es opcional pero vale la pena: '+
+       'si el peso no se mueve y la cintura baja, est&aacute;s cambiando grasa por m&uacute;sculo. '+
+       'Mir&aacute;ndote solo en la balanza eso parece que no pasa nada.</div>';
+  h += '<button class="btn btn-p btn-full" id="btn-body" onclick="guardarBody()">Guardar</button>';
+  if(!b.nuevo){
+    h += '<button class="btn btn-o btn-full" style="margin-top:8px" onclick="borrarBody()">Borrar esta medici&oacute;n</button>';
+  }
+  $('modal-box').innerHTML = h;
+}
+function guardarBody(){
+  var b = bodyDraft;
+  if(!b.d){ toast('Eleg&iacute; una fecha','err'); return; }
+  var p = nf(b.p);
+  if(!p){ toast('Falta el peso','err'); return; }
+  /* un error de tipeo en la balanza arruina la tendencia por semanas */
+  if(p < 25 || p > 300){ toast('&iquest;'+fKg(p)+' kg? Revis&aacute; el n&uacute;mero.','err'); return; }
+  var c = nf(b.c);
+  if(b.c !== '' && (c < 30 || c > 200)){ toast('&iquest;'+fKg(c)+' cm de cintura? Revis&aacute; el n&uacute;mero.','err'); return; }
+
+  /* una medicion por dia: volver a anotar el mismo dia corrige, no duplica */
+  var l = corporal().filter(function(x){ return x.d !== b.d; });
+  l.push({d:b.d, p:String(p), c:c ? String(c) : ''});
+  setCorporal(l);
+  closeModal();
+  buildProg();
+  toast('Medici&oacute;n guardada','ok');
+}
+function borrarBody(){
+  var b = bodyDraft;
+  if(!window.confirm('Borrar la medicion del '+b.d+'?')) return;
+  setCorporal(corporal().filter(function(x){ return x.d !== b.d; }));
+  closeModal();
+  buildProg();
+  toast('Medici&oacute;n borrada');
+}
+
+/* ==================================================================
    GRAFICOS
    ================================================================== */
 /* Chart.js dibuja adentro de un canvas: no entiende var(--...), asi que los
@@ -4513,6 +4704,39 @@ function PAL(){
 
 function drawProgCharts(){
   if(!window.Chart) return;
+
+  /* peso corporal: los puntos reales finitos y la tendencia gruesa. Al reves, la
+     linea cruda se lee como una montana rusa y oculta lo unico que importa. */
+  var cvb = $('cv-body');
+  if(cvb){
+    if(charts.body){ charts.body.destroy(); charts.body = null; }
+    var lb = corporal();
+    if(lb.length > 1){
+      var P = PAL(), sm = suavizado(lb);
+      charts.body = new Chart(cvb.getContext('2d'), {
+        type:'line',
+        data:{labels: lb.map(function(x){ return fShort(x.d); }), datasets:[
+          {data: sm, borderColor:P.cy, backgroundColor:'transparent', borderWidth:2.5,
+           tension:.3, pointRadius:0, order:1},
+          {data: lb.map(function(x){ return nf(x.p); }), borderColor:'transparent',
+           backgroundColor:P.tick, pointRadius:3, pointHoverRadius:5, showLine:false, order:2}
+        ]},
+        options:{responsive:true, maintainAspectRatio:false,
+          plugins:{legend:{display:false}, tooltip:Object.assign({}, TTo(), {callbacks:{
+            title:function(i){ return fDate(lb[i[0].dataIndex].d); },
+            label:function(c){
+              var x = lb[c.dataIndex];
+              return c.datasetIndex === 0
+                ? 'tendencia ' + fKg(Math.round(sm[c.dataIndex]*10)/10) + ' kg'
+                : fKg(x.p) + ' kg' + (nf(x.c) ? '  cintura ' + fKg(x.c) + ' cm' : '');
+            }
+          }})},
+          scales:{x:{grid:{display:false}, ticks:{color:P.tick, font:{size:10}, maxRotation:0}},
+                  y:{grid:{color:P.grid}, ticks:{color:P.tick, font:{size:10},
+                     callback:function(v){ return v+' kg'; }}}}}
+      });
+    }
+  }
 
   /* series por semana: un color, sin apilar. En 320px de ancho tres segmentos
      de color por barra eran una mancha, y la decision por tren ya la toma mejor

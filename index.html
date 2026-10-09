@@ -931,7 +931,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v17';
+var APP_VER   = 'v18';
 
 /* ==================================================================
    TEMA (v17)
@@ -1469,7 +1469,31 @@ function slug(s, sinCorte){
   if(o.charAt(o.length-1)==='-') o = o.substring(0,o.length-1);
   return sinCorte ? o : o.substring(0,40);
 }
-function nf(v){ var n=parseFloat(v); return isNaN(n)?0:n; }
+/* Acepta coma o punto. La planilla y el catalogo traen punto; lo que escribe
+   Diego en el telefono viene con coma. */
+function nf(v){ var n=parseFloat(String(v==null?'':v).replace(',','.')); return isNaN(n)?0:n; }
+
+/* ------------------------------------------------------------------
+   SEPARADOR DECIMAL (v18)
+   El teclado del iPhone en espanol ofrece COMA, pero <input type="number">
+   solo acepta PUNTO: lo dice la especificacion HTML ("valid floating-point
+   number"). Al tocar la coma el navegador la descarta sin avisar, y "11,25"
+   termina guardado como 1125: no es que no deje escribir, es que cambia el
+   numero por uno cien veces mas grande.
+   Por eso los campos CON decimales son type="text" + inputmode="decimal":
+   el teclado es el mismo, pero la coma entra y la normaliza decIn().
+   Los campos enteros (series, reps, kcal, cadencia) siguen siendo
+   type="number": ahi no hay separador que pueda romper nada.
+   ------------------------------------------------------------------ */
+/* lo tipeado -> como se guarda (siempre con punto, que es lo que entiende la planilla) */
+function decIn(v){
+  var t = String(v==null?'':v).replace(',','.').replace(/[^0-9.]/g,'');
+  var i = t.indexOf('.');
+  if(i !== -1) t = t.slice(0,i+1) + t.slice(i+1).replace(/\./g,'');   /* un solo separador */
+  return t;
+}
+/* como se guarda -> como se muestra en el campo (con coma, como lo escribe el) */
+function decOut(v){ return String(v==null?'':v).replace('.',','); }
 /* hasta 2 decimales: Diego carga pesos como 11,25 kg y redondear a 1 decimal
    los mostraba como 11,3, que no es lo que cargo. */
 function fKg(v){ var n=parseFloat(v); return isNaN(n)?'':(Math.round(n*100)/100).toString().replace('.',','); }
@@ -2725,8 +2749,8 @@ function buildTrain(){
       h +=   '</div>';
 
       h +=   '<div class="fields">';
-      h +=     '<div class="fld"><input type="number" step="0.5" min="0" inputmode="decimal" placeholder="&mdash;" '+
-               'value="'+esc(st.weight)+'" oninput="setF(\''+id+'\',\'weight\',this.value)"><span>kg</span></div>';
+      h +=     '<div class="fld"><input type="text" inputmode="decimal" placeholder="&mdash;" '+
+               'value="'+esc(decOut(st.weight))+'" oninput="setF(\''+id+'\',\'weight\',this.value)"><span>kg</span></div>';
       h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
                'value="'+esc(st.series)+'" oninput="setF(\''+id+'\',\'series\',this.value)"><span>ser</span></div>';
       h +=     '<div class="fld"><input type="number" step="1" min="0" inputmode="numeric" '+
@@ -2809,8 +2833,8 @@ function buildTrain(){
              salir del campo, asi el re-render no baja el teclado a mitad de escribir */
           var propio = pfijo && PASOS.every(function(v){ return Math.abs(pfijo - parseFloat(v)) > 0.001; });
           h +=   '<div class="pasoalt"><span>Otro:</span>'+
-                 '<input type="number" step="0.25" min="0" inputmode="decimal" placeholder="4,5"'+
-                 (propio ? ' class="on" value="'+pfijo+'"' : '')+
+                 '<input type="text" inputmode="decimal" placeholder="4,5"'+
+                 (propio ? ' class="on" value="'+decOut(pfijo)+'"' : '')+
                  ' onchange="setPaso(\''+id+'\',this.value)"><span>kg por escal&oacute;n</span></div>';
         } else {
           h +=   '<button class="pasobtn" onclick="togglePaso(\''+id+'\')">Sube de a <b>'+
@@ -3010,7 +3034,13 @@ function beep(){
 
 function pickDate(v){ if(!v) return; curDate=v; draftDirty=false; openEx=null; pararDescanso(); loadDraft(); buildTrain(); }
 function toggleEx(id){ if(draft[id]){ draft[id].done=!draft[id].done; draftDirty=true; buildTrain(); } }
-function setF(id,f,v){ if(draft[id]){ draft[id][f]=String(v||'').trim(); draftDirty=true; } }
+function setF(id,f,v){
+  if(!draft[id]) return;
+  /* el peso es el unico con decimales: se normaliza al guardar, no al mostrar,
+     asi el cursor no salta mientras escribis */
+  draft[id][f] = (f === 'weight') ? decIn(v) : String(v||'').trim();
+  draftDirty = true;
+}
 function applySug(id,v){ if(draft[id]){ draft[id].weight=String(v); draftDirty=true; buildTrain(); } }
 function removeEx(id){
   var i=draftOrder.indexOf(id);
@@ -3198,7 +3228,7 @@ function renderAdd(q){
   });
   h += '</div>';
   h += '<div class="f3">'+
-       '<div><div class="fl">Kg</div><input type="number" step="0.5" min="0" inputmode="decimal" id="add-w" placeholder="&mdash;" value="'+esc(newEx.w)+'" oninput="newEx.w=this.value"></div>'+
+       '<div><div class="fl">Kg</div><input type="text" inputmode="decimal" id="add-w" placeholder="&mdash;" value="'+esc(decOut(newEx.w))+'" oninput="newEx.w=decIn(this.value)"></div>'+
        '<div><div class="fl">Series</div><input type="number" step="1" min="0" inputmode="numeric" id="add-s" value="'+esc(newEx.s)+'" oninput="newEx.s=this.value"></div>'+
        '<div><div class="fl">Reps</div><input type="number" step="1" min="0" inputmode="numeric" id="add-r" value="'+esc(newEx.r)+'" oninput="newEx.r=this.value"></div>'+
        '</div>';
@@ -3399,7 +3429,7 @@ function renderCardio(){
   h += '<div class="f3">'+
        '<div><div class="fl">Min</div><input type="number" min="0" inputmode="numeric" id="c-min" value="'+(mm||'')+'" oninput="setDur()"></div>'+
        '<div><div class="fl">Seg</div><input type="number" min="0" max="59" inputmode="numeric" id="c-seg" value="'+(ss||'')+'" oninput="setDur()"></div>'+
-       '<div><div class="fl">Distancia km</div><input type="number" step="0.01" inputmode="decimal" id="c-km" value="'+esc(c.km)+'" oninput="setCardio(\'km\',this.value)"></div>'+
+       '<div><div class="fl">Distancia km</div><input type="text" inputmode="decimal" id="c-km" value="'+esc(decOut(c.km))+'" oninput="setCardio(\'km\',this.value)"></div>'+
        '</div>';
 
   /* calorias y cadencia */
@@ -3460,7 +3490,7 @@ function renderCardio(){
    virtual y, con type=number, borra lo tipeado a medio escribir ("1." vale "" para el
    navegador, asi que 1.25 terminaba guardandose como 25). Solo se refresca el ritmo. */
 function setCardio(k,v){
-  cardioDraft[k] = String(v||'').trim();
+  cardioDraft[k] = (k === 'km') ? decIn(v) : String(v||'').trim();
   if(k==='km' || k==='dur') pintarRitmo();
 }
 function setDur(){
@@ -4393,6 +4423,31 @@ function diasCorrida(){
   });
 }
 
+/* ==================================================================
+   KCAL DE CARDIO (v18)
+   La app NO las estima: son las que Diego copia del reloj al cargar la salida
+   (campos "Kcal activas" y "Kcal totales"). Estimarlas a partir de los km seria
+   inventar un numero con cara de medido, y el reloj ya lo mide con pulso.
+   Justamente porque se cargan a mano puede haber salidas sin el dato, asi que el
+   total SIEMPRE se muestra junto a cuantas lo tienen: un total pelado daria a
+   entender que estan todas y mentiria para abajo.
+   Se prefiere kcalTot (activas + basales, que es lo que cierra con el balance del
+   dia) y si no esta, las activas.
+   ================================================================== */
+function kcalDe(c){ return nf(c.kcalTot) || nf(c.kcalAct); }
+function kcalStats(dias){
+  var desde = '';
+  if(dias){ var d = new Date(); d.setDate(d.getDate() - dias); desde = isoOf(d); }
+  var o = {total:0, con:0, n:0};
+  cardioList().forEach(function(c){
+    if(desde && c.date < desde) return;
+    o.n++;
+    var k = kcalDe(c);
+    if(k){ o.total += k; o.con++; }
+  });
+  return o;
+}
+
 function cardioProgHTML(){
   var cs = corridas();
   if(!cs.length) return '';
@@ -4409,6 +4464,24 @@ function cardioProgHTML(){
   h += '<div class="rec-s">'+fDate(rec.c.date)+
        (nf(rec.c.dur) ? ' &middot; '+fDur(rec.c.dur) : '')+
        (rt ? ' &middot; '+fRitmo(rt)+' /km' : '')+'</div>';
+  /* kcal: debajo del record y arriba del grafico, que es donde se mira el resumen */
+  var k30 = kcalStats(30), kT = kcalStats(0);
+  if(kT.con){
+    h += '<div class="dkpis" style="margin:16px 0 0">'+
+         '<div class="dk"><span class="kick">Kcal 30 d&iacute;as</span><b>'+fInt(k30.total)+'</b>'+
+         '<span class="hm">'+(k30.n ? k30.con+' de '+k30.n+' salidas' : 'sin salidas')+'</span></div>'+
+         '<div class="dk"><span class="kick">Kcal en total</span><b>'+fInt(kT.total)+'</b>'+
+         '<span class="hm">'+kT.con+' de '+kT.n+' salidas</span></div>'+
+         '</div>';
+    if(kT.con < kT.n){
+      h += '<div class="hint" style="margin-top:8px">Son las kcal que copi&aacute;s del reloj al cargar la '+
+           'salida. Faltan en '+(kT.n - kT.con)+', as&iacute; que el total es un piso, no el gasto real.</div>';
+    }
+  } else {
+    h += '<div class="hint" style="margin-top:16px">Si cargu&aacute;s las <b>kcal</b> que te da el reloj al '+
+         'registrar una salida, ac&aacute; te muestro el acumulado.</div>';
+  }
+
   h += '<div class="chartbox" style="height:170px;margin-top:16px"><canvas id="cv-cardio"></canvas></div>';
   h += '<div style="text-align:center;margin-top:10px;line-height:1.7"><span class="kick" style="color:var(--dim)">'+
        'km por d&iacute;a &middot; <span style="color:var(--green-2)">r&eacute;cord</span> &middot; '+

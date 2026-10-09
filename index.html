@@ -938,7 +938,7 @@ var SECRET    = 'gym-diego-2026';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v19';
+var APP_VER   = 'v21';
 
 /* ==================================================================
    TEMA (v17)
@@ -4506,25 +4506,64 @@ function cardioProgHTML(){
    El gasto estimado es ruidoso y chico; el peso en el tiempo es una medicion
    real y es lo que de verdad responde.
 
-   DONDE SE GUARDA: en PREFS, clave 'corporal'. La planilla tiene una hoja
-   CORPORAL con las columnas justas y el backend tiene una accion saveBody de
-   una version vieja, pero no hay forma de comprobar desde aca si el Apps Script
-   DEVUELVE esa hoja al leer, y sin lectura el historial no sirve. PREFS en
-   cambio ida y vuelta esta probado (por ahi viajan 'tema' y 'modoEx'). Son unas
-   50 mediciones por anio: entra de sobra en una celda.
+   DONDE SE GUARDA: en la hoja CORPORAL de la planilla (Fecha | Peso | Cintura).
+   En v19 esto vivia en PREFS porque no habia forma de comprobar si el Apps
+   Script devolvia esa hoja al leer; con el backend a la vista se confirmo que
+   buildData_ la devuelve como 'body' y que doPost acepta la accion 'saveBody',
+   asi que ahora va donde corresponde. Lo que haya quedado en PREFS se migra
+   solo la primera vez (ver migrarCorporal).
+
+   OJO con el orden: el backend devuelve 'body' del mas NUEVO al mas viejo, y
+   todo lo de aca abajo (tendencia, comparaciones) necesita el orden cronologico.
+   Se da vuelta en corporal() y no en cada lugar que lo usa.
 
    LA CINTURA no es un extra decorativo: peso estable con cintura que baja es
    recomposicion (ganaste musculo y perdiste grasa), y mirando solo la balanza
    eso se lee como "no pasa nada" y desmotiva.
    ================================================================== */
 function corporal(){
-  var l = pref('corporal', []);
-  if(!l || l.length === undefined) l = [];
-  return l.slice().sort(function(a, b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
+  var l = (D && D.body) ? D.body : [];
+  return l.map(function(x){ return {d:_str(x.date), p:_str(x.weight), c:_str(x.waist)}; })
+    /* una fila con fecha pero sin peso es una medicion borrada con el metodo viejo
+       (ver borrarBody): se ignora igual que si no estuviera */
+    .filter(function(x){ return x.d && nf(x.p) > 0; })
+    .sort(function(a, b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
 }
-function setCorporal(l){
-  l.sort(function(a, b){ return a.d < b.d ? -1 : (a.d > b.d ? 1 : 0); });
-  return setPref('corporal', l);
+function _str(v){ return (v === null || v === undefined) ? '' : String(v).trim(); }
+
+/* Escribe en la hoja y refresca desde la planilla, que es la unica fuente de
+   verdad. Pinta el cambio al instante para no dejar la pantalla quieta mientras
+   viaja el pedido. */
+function guardarMedicion(date, weight, waist, ok){
+  if(D && D.body){
+    var l = D.body.filter(function(x){ return _str(x.date) !== date; });
+    l.unshift({date:date, weight:String(weight), waist:String(waist)});
+    D.body = l;
+  }
+  buildProg();
+  return apiPost('saveBody', {date:date, weight:String(weight), waist:String(waist)}, $('btn-body'))
+    .then(function(){ toast(ok, 'ok'); fetchData(true); })
+    .catch(function(e){ toast('No pude guardarlo en la planilla: '+e.message, 'err'); fetchData(true); });
+}
+
+/* Migracion unica desde v19: lo que se haya anotado cuando esto vivia en PREFS
+   pasa a la hoja CORPORAL. Se corre al llegar los datos y se limpia la clave
+   vieja solo cuando todas las mediciones entraron bien. */
+function migrarCorporal(){
+  var viejo = pref('corporal', []);
+  if(!viejo || !viejo.length) return;
+  var hay = {};
+  ((D && D.body) ? D.body : []).forEach(function(x){ hay[_str(x.date)] = true; });
+  var faltan = viejo.filter(function(x){ return x && x.d && !hay[x.d]; });
+  if(!faltan.length){ setPref('corporal', []); return; }
+  Promise.all(faltan.map(function(x){
+    return apiPost('saveBody', {date:x.d, weight:String(x.p || ''), waist:String(x.c || '')});
+  })).then(function(){
+    setPref('corporal', []);
+    toast(faltan.length+(faltan.length === 1 ? ' medici&oacute;n pasada' : ' mediciones pasadas')+
+          ' a la planilla', 'ok');
+    fetchData(true);
+  }).catch(function(){ /* si falla, la clave vieja queda y se reintenta al proximo refresco */ });
 }
 /* El peso de un dia puntual depende de cuanta agua y sal tenes encima y se mueve
    un kilo de un dia para el otro: leer la balanza cruda lleva a conclusiones
@@ -4665,21 +4704,32 @@ function guardarBody(){
   var c = nf(b.c);
   if(b.c !== '' && (c < 30 || c > 200)){ toast('&iquest;'+fKg(c)+' cm de cintura? Revis&aacute; el n&uacute;mero.','err'); return; }
 
-  /* una medicion por dia: volver a anotar el mismo dia corrige, no duplica */
-  var l = corporal().filter(function(x){ return x.d !== b.d; });
-  l.push({d:b.d, p:String(p), c:c ? String(c) : ''});
-  setCorporal(l);
+  /* una medicion por dia: el backend hace upsert por fecha, asi que volver a
+     anotar el mismo dia corrige en vez de duplicar */
   closeModal();
-  buildProg();
-  toast('Medici&oacute;n guardada','ok');
+  guardarMedicion(b.d, p, c || '', 'Medici&oacute;n guardada');
 }
+/* Borrar de verdad necesita la accion deleteBody en el Apps Script (borra la fila
+   de CORPORAL). Si ese backend no la tiene todavia, responde "Accion desconocida"
+   y se cae al metodo viejo: guardar la fecha SIN peso, que corporal() ignora.
+   A la vista queda igual; la diferencia es que el segundo deja el renglon vacio en
+   la planilla. Asi la app anda con el backend actualizado y con el de antes. */
 function borrarBody(){
-  var b = bodyDraft;
-  if(!window.confirm('Borrar la medicion del '+b.d+'?')) return;
-  setCorporal(corporal().filter(function(x){ return x.d !== b.d; }));
+  var b = bodyDraft, fecha = b.d;
+  if(!window.confirm('Borrar la medicion del '+fecha+'?')) return;
   closeModal();
+  if(D && D.body) D.body = D.body.filter(function(x){ return _str(x.date) !== fecha; });
   buildProg();
-  toast('Medici&oacute;n borrada');
+  apiPost('deleteBody', {date:fecha})
+    .then(function(){ toast('Medici&oacute;n borrada'); fetchData(true); })
+    .catch(function(e){
+      if(/desconocida/i.test(e.message || '')){
+        guardarMedicion(fecha, '', '', 'Medici&oacute;n borrada');
+      } else {
+        toast('No pude borrarla: '+e.message, 'err');
+        fetchData(true);
+      }
+    });
 }
 
 /* ==================================================================
@@ -5136,6 +5186,7 @@ function afterData(){
   }
   /* si este telefono nunca eligio tema, toma el que quedo guardado en la cuenta */
   sincronizarTema();
+  migrarCorporal();
 
   /* refrescar no debe moverte de lugar: se conserva pestana y posicion de scroll */
   var y = window.scrollY;

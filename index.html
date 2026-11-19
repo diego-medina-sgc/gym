@@ -939,7 +939,7 @@ var SESION    = '';
 /* Version visible en el header. Subir este numero en CADA deploy.
    Sirve para saber de un vistazo si el celular esta corriendo la version nueva o una
    cacheada por Safari, sin tener que adivinar. */
-var APP_VER   = 'v22';
+var APP_VER   = 'v23';
 
 /* ==================================================================
    TEMA (v17)
@@ -1017,6 +1017,44 @@ function cssv(n, fb){
    La ruedita del header. Junta lo que antes eran dos botones sueltos
    (actualizar y salir) y suma el selector de tema.
    ================================================================== */
+/* ==================================================================
+   NOVEDADES (v23, 19/11/2026): se muestran una vez al entrar.
+   Regla: en cada version nueva, sumar su entrada ARRIBA de NOVEDADES,
+   en lenguaje de uso (que cambia para Diego, no como esta hecho).
+   La ultima vista se guarda en PREFS ('nov'), asi vale para cualquier telefono.
+   ================================================================== */
+var NOVEDADES = [
+  [23, 'Novedades y actualizaci&oacute;n de verdad', [
+    ['&#128227;', 'Cuando haya cambios en la app te los cuento ac&aacute; al entrar. Tambi&eacute;n est&aacute;n en <b>Ajustes &rsaquo; Novedades</b>.'],
+    ['&#128260;', 'Si hay una versi&oacute;n nueva, arriba aparece un aviso con <b>Actualizar</b>. Y el Actualizar de Ajustes ahora trae la app nueva, no solo los datos.']]],
+  [22, 'Tus datos, solo para vos', [
+    ['&#128274;', 'La app pide entrar con Google y te recuerda 30 d&iacute;as. Antes, quien tuviera la direcci&oacute;n del servidor pod&iacute;a ver tus entrenamientos y tu peso.'],
+    ['&#128241;', 'Si alguna vez ves <b>Usar POST con sesion</b>, el tel&eacute;fono tiene una versi&oacute;n vieja guardada: abrila en Safari y recarg&aacute;.']]]
+];
+function versionNum(v){ return parseInt(String(v).replace(/\D/g,''),10) || 0; }
+function chequearNovedades(){
+  if(!D || !userEmail) return;
+  if($('modal-ov').classList.contains('open')) return;
+  var actual = versionNum(APP_VER), vista = +pref('nov', 21);
+  if(vista >= actual) return;
+  setPref('nov', actual);   /* se marca antes de mostrar: no se repite en cada recarga */
+  verNovedades(vista);
+}
+function verNovedades(desde){
+  var lst = NOVEDADES.filter(function(n){ return n[0] > (desde || 0); }).slice(0, 4);
+  if(!lst.length) lst = NOVEDADES.slice(0, 2);
+  var h = '<div class="mttl"><h3>Novedades</h3><button class="mx" onclick="closeModal()">&#10005;</button></div>';
+  lst.forEach(function(n){
+    h += '<div class="mdiv"><span>v'+n[0]+' &middot; '+n[1]+'</span></div>';
+    n[2].forEach(function(x){
+      h += '<div class="hint" style="display:flex;gap:10px;align-items:flex-start;margin:8px 0">'+
+           '<span style="font-size:1.2em;line-height:1.2">'+x[0]+'</span><span>'+x[1]+'</span></div>';
+    });
+  });
+  $('modal-box').innerHTML = h;
+  openModal();
+}
+
 function openAjustes(){ renderAjustes(); openModal(); }
 function renderAjustes(){
   var t = temaActual();
@@ -1025,7 +1063,7 @@ function renderAjustes(){
   h += '<button class="setrow" onclick="ajusteRefrescar()">'+
        '<span class="si"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36M21 3v6h-6"/></svg></span>'+
        '<span class="sb"><span class="sn">Actualizar</span>'+
-       '<span class="sd">Traer lo &uacute;ltimo de la planilla</span></span></button>';
+       '<span class="sd">Traer la &uacute;ltima versi&oacute;n de la app y de la planilla</span></span></button>';
 
   h += '<div class="mdiv"><span>Tema</span></div>';
   h += '<div class="temagrid">';
@@ -1040,6 +1078,11 @@ function renderAjustes(){
   h += '<div class="hint" style="margin-top:10px">El tema queda guardado en la planilla: si entr&aacute;s '+
        'desde otro tel&eacute;fono lo vas a encontrar igual.</div>';
 
+  h += '<button class="setrow" onclick="verNovedades(versionNum(APP_VER)-3)">'+
+       '<span class="si"><svg viewBox="0 0 24 24"><path d="M3 11l18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg></span>'+
+       '<span class="sb"><span class="sn">Novedades</span>'+
+       '<span class="sd">Lo &uacute;ltimo que cambi&oacute; en la app</span></span></button>';
+
   h += '<div class="mdiv"><span>Cuenta</span></div>';
   h += '<button class="setrow" onclick="closeModal();diag()">'+
        '<span class="si"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></span>'+
@@ -1052,7 +1095,39 @@ function renderAjustes(){
 
   $('modal-box').innerHTML = h;
 }
-function ajusteRefrescar(){ closeModal(); fetchData(); toast('Actualizando...'); }
+function ajusteRefrescar(){ closeModal(); toast('Actualizando...'); actualizarApp(); }
+/* v23: ACTUALIZAR LA APP (mismo patron que Cerdapp v9).
+   Antes "Actualizar" solo traia datos: el iPhone seguia con el HTML viejo.
+   buscarVersion() compara APP_VER con el publicado al abrir y al volver a la app,
+   y si cambio muestra el aviso. actualizarApp() recarga con ?v= para saltear la cache. */
+function buscarVersion(){
+  if(location.protocol === 'file:') return;
+  fetch(location.pathname + '?check=' + Date.now(), {cache:'no-store'})
+    .then(function(r){ return r.ok ? r.text() : ''; })
+    .then(function(t){
+      var m = t.match(/var APP_VER\s*=\s*'([^']+)'/);
+      if(m && m[1] !== APP_VER) mostrarNueva(m[1]);
+    }).catch(function(){});
+}
+function mostrarNueva(v){
+  if($('nueva')) return;
+  var d = document.createElement('div');
+  d.id = 'nueva';
+  d.style.cssText = 'background:var(--violet-lt);color:var(--text);font-size:13.5px;font-weight:700;padding:10px 18px;display:flex;gap:10px;align-items:center';
+  d.innerHTML = '<span style="flex:1">Hay una versi&oacute;n nueva de Gym Bro ('+esc(v)+').</span>'+
+    '<button onclick="actualizarApp()" style="background:var(--violet);color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:700">Actualizar</button>';
+  var hdr = document.querySelector('header');
+  if(hdr && hdr.parentNode) hdr.parentNode.insertBefore(d, hdr.nextSibling);
+  else document.body.insertBefore(d, document.body.firstChild);
+}
+function actualizarApp(){
+  /* la sesion a medio cargar queda guardada en el telefono (loadDraft la recupera) */
+  location.replace(location.pathname + '?v=' + Date.now());
+}
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'visible') buscarVersion();
+});
+
 function ajusteSalir(){
   if(draftDirty && !window.confirm('Tenes una sesion sin guardar. Salir igual?')) return;
   closeModal();
@@ -5205,6 +5280,7 @@ function afterData(){
   render();
   switchTab(activeTab, true);
   window.scrollTo(0, y);
+  setTimeout(chequearNovedades, 600);
 
   if(draftDirty) toast('Datos actualizados &middot; tu sesi&oacute;n sin guardar sigue ac&aacute;');
 }
@@ -5303,6 +5379,7 @@ window.addEventListener('load', function(){
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
   aplicarTema(temaActual());
   initAuth();
+  setTimeout(buscarVersion, 2500);
 });
 </script>
 </body>
